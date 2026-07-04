@@ -1,0 +1,31 @@
+# Day 1-2 — environment + webhook receiver
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-dotenv==1.0.1
+pydantic==2.10.4
+pydantic-settings==2.7.1
+requests==2.32.3
+
+# Testing
+pytest==8.3.4
+httpx==0.28.1
+
+# --- Added Day 3-4 (PostgreSQL) ---
+# sqlalchemy==2.0.36
+# alembic==1.14.0
+# psycopg2-binary==2.9.10
+
+# --- Added Day 5-6 (Redis + Celery) ---
+# celery==5.4.0
+# redis==5.2.1
+
+# --- Added Day 7 (Tree-sitter chunking) ---
+# tree-sitter==0.23.2
+# tree-sitter-python==0.23.6
+
+# --- Added Day 8-9 (Embeddings + Qdrant) ---
+# openai==1.58.1
+# qdrant-client==1.12.1
+
+# --- Added Day 15+ (GitHub App integration) ---
+# pygithub==2.5.0
