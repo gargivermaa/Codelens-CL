@@ -1,18 +1,9 @@
 """
-POST /webhook — receives GitHub webhook events.
+POST /webhook: receives GitHub webhook events.
 
-Day 1-2 scope (locked):
-  - Verify the request is genuinely from GitHub (HMAC-SHA256 signature check)
-  - Parse the payload
-  - Log which PR event was received
-  - Return immediately
-
-NOT in scope yet:
-  - Celery dispatch (Day 5-6)
-  - PostgreSQL writes (Day 3-4)
-  - Chunking/retrieval/review (Day 7+)
-These are added by editing this file on their locked days — the signature
-verification and routing logic below does not change when that happens.
+Flow: verify HMAC signature -> parse -> enqueue Celery task -> return fast.
+GitHub expects a response within ~10 seconds, so ALL real work happens in the
+Celery worker, never in this request.
 """
 import hashlib
 import hmac
@@ -20,6 +11,7 @@ import json
 import logging
 
 from fastapi import APIRouter, Header, HTTPException, Request
+from kombu.exceptions import OperationalError as BrokerUnavailableError
 
 from app.config import settings
 
@@ -46,6 +38,7 @@ async def github_webhook(
     x_github_event: str | None = Header(default=None),
     x_hub_signature_256: str | None = Header(default=None),
 ):
+    # Signature must be computed over the RAW bytes, before any JSON parsing.
     raw_body = await request.body()
 
     if not verify_github_signature(raw_body, x_hub_signature_256):
@@ -59,35 +52,31 @@ async def github_webhook(
 
     action = payload.get("action")
 
-   
     if x_github_event == "pull_request" and action in ("opened", "synchronize"):
         pr = payload["pull_request"]
-        repo = payload["repository"]
-
         pr_number = pr["number"]
-        repo_name = repo["full_name"]
-        repo_github_id = repo["id"]
-        installation_id = payload.get("installation", {}).get("id")
-
-        logger.info(
-            "Received PR event: repo=%s pr=#%d action=%s",
-            repo_name, pr_number, action
-        )
+        repo_name = payload["repository"]["full_name"]
+        logger.info("Received PR event: repo=%s pr=#%d action=%s", repo_name, pr_number, action)
 
         from app.tasks.review_task import process_pr_review
 
-        process_pr_review.delay(
-            repo_github_id=repo_github_id,
-            repo_full_name=repo_name,
-            pr_number=pr_number,
-            installation_id=installation_id,
-            title=pr.get("title"),
-            author=(pr.get("user") or {}).get("login"),
-        )
+        try:
+            process_pr_review.delay(
+                repo_github_id=payload["repository"]["id"],
+                repo_full_name=repo_name,
+                pr_number=pr_number,
+                installation_id=payload.get("installation", {}).get("id"),
+                title=pr.get("title"),
+                
+                author=(pr.get("user") or {}).get("login"),
+            )
+        except BrokerUnavailableError:
+            # Redis is down: the job was NOT queued. Return 503 (not 200) so the
+            # failure is visible in GitHub's "Recent Deliveries" and can be redelivered.
+            logger.exception("Queue unavailable: repo=%s pr=#%d", repo_name, pr_number)
+            raise HTTPException(status_code=503, detail="Task queue unavailable")
 
-        return {
-            "status": "queued",
-            "repo": repo_name,
-            "pr": pr_number,
-            "action": action,
-        }
+        return {"status": "queued", "repo": repo_name, "pr": pr_number, "action": action}
+
+    logger.info("Ignored event: type=%s action=%s", x_github_event, action)
+    return {"status": "ignored", "event": x_github_event, "action": action}
