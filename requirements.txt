@@ -19,9 +19,9 @@ psycopg2-binary==2.9.10
 celery==5.4.0
 redis==6.4.0
 
-# --- Added Day 7 (Tree-sitter chunking) ---
-# tree-sitter==0.23.2
-# tree-sitter-python==0.23.6
+--- Added Day 7 (Tree-sitter chunking) ---
+tree-sitter==0.23.2
+tree-sitter-python==0.23.6
 
 # --- Added Day 8-9 (Embeddings + Qdrant) ---
 # openai==1.58.1
