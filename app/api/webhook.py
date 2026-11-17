@@ -59,14 +59,35 @@ async def github_webhook(
 
     action = payload.get("action")
 
+   
     if x_github_event == "pull_request" and action in ("opened", "synchronize"):
-        pr_number = payload["pull_request"]["number"]
-        repo_name = payload["repository"]["full_name"]
-        logger.info("Received PR event: repo=%s pr=#%d action=%s", repo_name, pr_number, action)
+        pr = payload["pull_request"]
+        repo = payload["repository"]
 
-        # Day 5-6: replace the line below with
-        #   process_pr_review.delay(repo_name, pr_number, installation_id)
-        return {"status": "received", "repo": repo_name, "pr": pr_number, "action": action}
+        pr_number = pr["number"]
+        repo_name = repo["full_name"]
+        repo_github_id = repo["id"]
+        installation_id = payload.get("installation", {}).get("id")
 
-    logger.info("Ignored event: type=%s action=%s", x_github_event, action)
-    return {"status": "ignored", "event": x_github_event, "action": action}
+        logger.info(
+            "Received PR event: repo=%s pr=#%d action=%s",
+            repo_name, pr_number, action
+        )
+
+        from app.tasks.review_task import process_pr_review
+
+        process_pr_review.delay(
+            repo_github_id=repo_github_id,
+            repo_full_name=repo_name,
+            pr_number=pr_number,
+            installation_id=installation_id,
+            title=pr.get("title"),
+            author=(pr.get("user") or {}).get("login"),
+        )
+
+        return {
+            "status": "queued",
+            "repo": repo_name,
+            "pr": pr_number,
+            "action": action,
+        }
