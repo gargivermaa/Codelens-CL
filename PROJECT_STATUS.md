@@ -15,10 +15,10 @@ Branch: `claude/full-project-implementation` (based on `d6a1998`). Last updated:
 | 1 | PostgreSQL models + Alembic | ✅ | migrations up/down/up on PG 16, `alembic check` clean, `test_db.py` |
 | 1 | Redis + Celery | ✅ | live worker consumed a webhook job (section 4); retry policy in `test_tasks_and_api.py` |
 | 2 | Tree-sitter chunking, lossless splitting, exclusions | ✅ | `test_chunker.py` (33) |
-| 3 | Gemini embeddings (batching, normalization, retry, quota errors, query task type) | 🧪 | real `google-genai` SDK against a mock HTTP transport. **The previous real run (54 chunks, `repo_1289349644`) predates this branch.** |
+| 3 | Gemini embeddings (batching, normalization, retry, quota errors, query task type) | ✅ | real run on the owner's laptop: 23 chunks embedded and stored in a local Qdrant server (section 5) |
 | 3 | Qdrant indexing: incremental, failure-safe, per-repo | ✅ | `test_embedder.py` (34) on qdrant-client local mode |
-| 4 | Hybrid retrieval (BM25 + dense + RRF) | ✅ BM25 / 🧪 dense | `test_retriever.py` (12); BM25 benchmark measured |
-| 5 | LangGraph review pipeline (11 nodes + conditional security) | 🧪 | `test_review.py` (16) with a scripted LLM; Gemini client tested through the real SDK with mock HTTP |
+| 4 | Hybrid retrieval (BM25 + dense + RRF) | ✅ | `test_retriever.py` (12); all three modes measured with real Gemini embeddings |
+| 5 | LangGraph review pipeline (11 nodes + conditional security) | ✅ | real benchmark run with `gemini-3.5-flash-lite`, 0 LLM errors (section 5); `test_review.py` (17) |
 | 5 | Security rules | ✅ | measured on the benchmark (section 5) |
 | 6 | Risk scoring | ✅ | documented formula, `test_review.py` |
 | 6 | Persistence of reviews, findings, retrieval logs | ✅ | `test_review_service.py` against real PostgreSQL |
@@ -29,11 +29,11 @@ Branch: `claude/full-project-implementation` (based on `d6a1998`). Last updated:
 | 10 | Dockerfile + Compose | 🧪 | `docker compose config` valid; images not built here (no Docker daemon) |
 | 10 | README, ARCHITECTURE, this file | ✅ | |
 | — | Real GitHub PR reviewed end-to-end | ⏳ | needs a GitHub App or token and a test repository (section 6) |
-| — | Dense, hybrid and LLM benchmark numbers | ⏳ | needs `GEMINI_API_KEY` (section 6) |
+| — | Dense, hybrid and LLM benchmark numbers | ✅ | measured on the owner's laptop (section 5) |
 
 ## 2. Test results (actual)
 
-`pytest -q`: **150 passed**. This was run on Python 3.13 and again on Python 3.11 (a clean
+`pytest -q`: **151 passed** (150 when first verified on the owner's laptop, before the model-error test was added). This was run on Python 3.13 and again on Python 3.11 (a clean
 install of `requirements.txt`). PostgreSQL 16 and Redis 7 ran locally. No API keys and
 no network calls were used.
 
@@ -42,7 +42,7 @@ no network calls were used.
 | test_chunker.py | 33 |
 | test_embedder.py | 34 |
 | test_retriever.py | 12 |
-| test_review.py | 16 |
+| test_review.py | 17 |
 | test_github.py | 14 |
 | test_tasks_and_api.py | 10 |
 | test_review_service.py | 7 |
@@ -96,41 +96,59 @@ retried. The plumbing up to the GitHub call is verified; the GitHub part is not.
 
 ## 5. Measured benchmark results
 
-All numbers come from `benchmarks/results/*.json`. The corpus is the 23-chunk
-`benchmarks/sample_repo`, so it is small and absolute values will not transfer to
-large repositories.
+All numbers are real runs; the JSON reports are in `benchmarks/results/`. The
+corpus is the 23-chunk `benchmarks/sample_repo`, so it is small and absolute values
+will not transfer to large repositories.
 
-**Retrieval, BM25 only** (15 labelled queries, k = 5):
+**Retrieval** (15 labelled queries, k = 5; real `gemini-embedding-001`, 1536-d,
+measured on the owner's laptop, 2026-11-18):
 
 | mode | P@1 | P@3 | P@5 | R@5 | MRR | median latency |
 |---|---|---|---|---|---|---|
-| bm25 | 0.933 | 0.578 | 0.373 | 0.978 | 0.967 | 0.04 ms |
-| dense | not run (needs `GEMINI_API_KEY`) | | | | | |
-| hybrid | not run (needs `GEMINI_API_KEY`) | | | | | |
+| bm25 | 0.933 | 0.578 | 0.373 | 0.978 | 0.967 | 0.19 ms |
+| dense | 0.733 | 0.489 | 0.333 | 0.878 | 0.867 | 1180 ms |
+| hybrid (RRF) | 0.867 | 0.556 | 0.360 | 0.944 | 0.933 | 1150 ms |
 
-P@5 is bounded by the label count: most queries have 1–2 relevant chunks, so the
-maximum P@5 is about 0.4.
+Reading the results: the queries are changed code that shares exact identifiers with
+its targets, and the corpus is tiny, which favours BM25. Dense retrieval matches by
+meaning but is weaker on exact names. Hybrid beats dense on every metric and stays
+close to BM25, which is why it is the default. Hybrid latency is almost entirely the
+Gemini query-embedding call. P@5 is capped near 0.4 because most queries have only
+1–2 relevant chunks.
 
-**Review, rules only, no LLM** (8 seeded defects, 3 clean PRs): precision 1.00,
-recall 0.375 (3 of 8: weak random token, `shell=True`, hardcoded password), clean-case
-false-positive rate 0.00. The five defects that need reasoning (IDOR, path traversal,
-SQL f-string through a wrapper, two arithmetic bugs) are for the LLM; `--mode llm` has
-not been run yet.
+**Review** (8 seeded defects, 3 clean PRs; review model `gemini-3.5-flash-lite`,
+free tier, 0 failed LLM calls; measured on the owner's laptop, 2026-11-18):
+
+| configuration | precision | recall | clean-PR FP rate | median time / PR |
+|---|---|---|---|---|
+| rules only (no LLM) | 1.00 | 0.375 (3/8) | 0.00 | 3.6 ms |
+| LLM + hybrid context, confirmed findings | **0.875** (7/8) | **0.875** (7/8) | **0.00** | 6.3 s |
+| LLM + hybrid context, incl. possible | 0.778 (7/9) | 0.875 | 0.00 | |
+
+Per case: weak token, SQL injection, discount bug, path traversal, command
+injection, hardcoded password and tax bug were all found and confirmed. The three
+clean PRs got no findings. Two cases need explanation, and the labels were
+**not** changed after seeing the results:
+* **r03 (IDOR) counts as missed.** The model reported "Authorization check removed
+  from get_order" on the right line, but as category `bug` with `possible`
+  status, and the protocol requires a security-category match.
+* **r04's extra finding counts as the one false positive.** "Discount calculation
+  missing percentage cap" is arguably a real issue: the seeded change also removed
+  the `MAX_DISCOUNT_PERCENT` cap, but the label only lists the `// 10` bug.
+
+Latency: mean 8.1 s, p95 20.0 s per PR (3 LLM calls plus retrieval, with the
+client-side free-tier throttle of 1 request per second).
+
+Model note: `gemini-2.5-flash` returned 404 ("no longer available to new users").
+`gemini-3.8-flash` was available but returned 503 (overloaded) during testing.
+`gemini-3.5-flash-lite` worked and is now the default. With no billing account
+linked, a model outside the free tier can only fail with 429; it cannot incur charges.
 
 ## 6. Blockers and what the owner must run
 
 These could not be verified in this environment. None of them are faked.
 
-1. **Real Gemini calls.** The sandbox has no API key, and the docs site
-   (ai.google.dev) was not reachable, so free-tier model availability could not be
-   re-checked today. To verify, run:
-   * `python -m app.cli index-local benchmarks/sample_repo --github-id 1`
-   * `python -m app.evaluation.run retrieval`
-   * `python -m app.evaluation.run review --mode llm`
-
-   `GEMINI_REVIEW_MODEL` defaults to `gemini-2.5-flash`. Confirm it is listed as free
-   of charge at <https://ai.google.dev/gemini-api/docs/pricing>, or switch to a listed
-   free Flash or Flash-Lite model.
+1. ~~Real Gemini calls~~ — done on the owner's laptop (section 5).
 2. **Real GitHub.** Create a GitHub App (README → Connecting GitHub), install it on a
    *public* test repository, and point a smee.io tunnel at `/webhook`. Opening a PR is
    then the end-to-end test. A quicker check: `python -m app.cli review OWNER/REPO N
@@ -157,8 +175,7 @@ These could not be verified in this environment. None of them are faked.
 
 ## 8. Next steps
 
-1. Get a free Gemini key and run the three verification commands in section 6.1. Paste
-   the results into section 5.
+1. ~~Real Gemini verification~~ — done (section 5).
 2. Run a real PR on a public test repository via the GitHub App (section 6.2).
 3. `docker compose up --build` on your machine.
 4. Optional: a JavaScript/TypeScript grammar; a GitHub check run showing the risk label;

@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     EMBEDDING_QUERY_TASK_TYPE: str = "CODE_RETRIEVAL_QUERY"
     # Review LLM. Must be a model that is free of charge on the free tier.
-    GEMINI_REVIEW_MODEL: str = "gemini-2.5-flash"
+    GEMINI_REVIEW_MODEL: str = "gemini-3.5-flash-lite"
     GEMINI_MAX_ATTEMPTS: int = 5
     # Spacing between Gemini requests from this process (free-tier RPM limits).
     GEMINI_MIN_REQUEST_INTERVAL_S: float = 1.0
