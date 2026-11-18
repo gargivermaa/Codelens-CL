@@ -9,11 +9,8 @@ from app.models.database import Base
 class PullRequest(Base):
     __tablename__ = "pull_requests"
     __table_args__ = (
-        UniqueConstraint(
-            "repo_id",
-            "pr_number",
-            name="uq_pull_requests_repo_pr",
-        ),
+        # One row per (repo, PR number): repeated webhooks update, never duplicate.
+        UniqueConstraint("repo_id", "pr_number", name="uq_pull_requests_repo_pr"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -27,8 +24,11 @@ class PullRequest(Base):
     title: Mapped[str | None] = mapped_column(String, nullable=True)
     author: Mapped[str | None] = mapped_column(String, nullable=True)
 
+    # Latest head commit seen for this PR.
+    head_sha: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
     # State machine: pending → processing → completed | failed
-    # The Celery worker (Day 5-6) owns all transitions after "pending".
+    # (status of the latest review attempt; per-commit detail lives in reviews).
     status: Mapped[str] = mapped_column(String, nullable=False, default="pending")
 
     created_at: Mapped[datetime] = mapped_column(
