@@ -34,10 +34,11 @@ logger = logging.getLogger("codelens.chunker")
 
 PY_LANGUAGE = Language(tspython.language())
 
-# text-embedding-3-small accepts 8191 tokens (~4 chars/token). 24k chars keeps a
-# safe margin even for token-dense code.
-MAX_CHUNK_CHARS = 24_000
+# text-embedding-3-small accepts 8191 tokens (~4 chars/token).# Caps the chunk text kept in the payload (what the review LLM later reads).
+# The embedding model's own input limit is enforced separately in embedder.py.
 
+MAX_CHUNK_CHARS = 24_000
+MAX_EMBED_CHUNK_CHARS = 1500
 # Larger files are almost always generated/vendored code, not worth indexing.
 MAX_FILE_BYTES = 1_000_000
 

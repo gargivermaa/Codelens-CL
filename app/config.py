@@ -28,6 +28,9 @@ class Settings(BaseSettings):
 
     # --- Day 8-9: Qdrant ---
     QDRANT_URL: str = ""
+    # --- Day 8-9: Embedding providers ---
+    OPENAI_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
 
     # --- Week 4 Should Have: LangSmith ---
     LANGSMITH_API_KEY: str = ""
