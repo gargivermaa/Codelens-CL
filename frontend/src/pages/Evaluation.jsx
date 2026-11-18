@@ -69,6 +69,12 @@ function ComparisonTable({ reports, split }) {
         </tbody>
       </table>
       <div className="mt-3 space-y-1">
+        {CONFIGS.filter((c) => reports[c.id]?.valid === false).map((c) => (
+          <div key={`inv-${c.id}`} className="rounded-md border border-critical/40 bg-critical/10 px-3 py-2 text-xs text-ink">
+            <b className="text-critical">{c.label}: invalid run.</b> {reports[c.id].api_failures} LLM failure(s),{" "}
+            {reports[c.id].retrieval_degraded_cases ?? 0} case(s) with degraded retrieval (quota?). Do not report these numbers; re-run when the quota resets.
+          </div>
+        ))}
         {CONFIGS.filter((c) => !reports[c.id]).map((c) => <div key={c.id}><NotRun config={c.id} split={split} /></div>)}
       </div>
     </div>
