@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { color-scheme: dark; }
+/* Code must show the exact characters typed: no "->" arrow ligatures. */
+.font-mono, pre, code { font-variant-ligatures: none; }
+body { background: #0b1020; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #26304a; border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+@layer components {
+  .card { @apply rounded-xl border border-line bg-surface; }
+  .table-head { @apply text-left text-xs font-medium uppercase tracking-wide text-muted; }
+  .focus-ring { @apply outline-none focus-visible:ring-2 focus-visible:ring-accent/70; }
+}

@@ -90,7 +90,8 @@ class IndexResult:
 def get_gemini_client():
     """Create the real Gemini API client with bounded retry/backoff."""
     if not settings.GEMINI_API_KEY:
-        raise RuntimeError("GEMINI_API_KEY is not set (add it to .env)")
+        # EmbeddingError (a RuntimeError): callers degrade to "no repository context".
+        raise EmbeddingError("GEMINI_API_KEY is not set (add it to .env)")
     return genai.Client(
         api_key=settings.GEMINI_API_KEY,
         http_options=types.HttpOptions(
