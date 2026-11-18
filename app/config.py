@@ -5,6 +5,8 @@ Only GITHUB_WEBHOOK_SECRET is required to boot the API. Everything else has a
 safe default so individual components (tests, the chunker CLI, ...) can run
 without the full stack. Secrets are never logged.
 """
+import os
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -50,7 +52,16 @@ class Settings(BaseSettings):
     REVIEW_MAX_INLINE_COMMENTS: int = 15
 
     # --- LangSmith tracing (optional, free developer tier) ---
+    LANGSMITH_TRACING: bool = False
     LANGSMITH_API_KEY: str = ""
+    LANGSMITH_PROJECT: str = "codelens-ci"
 
 
 settings = Settings()
+
+# LangGraph/LangSmith read tracing settings from os.environ, which .env values
+# are not exported to; export them only when tracing is explicitly enabled.
+if settings.LANGSMITH_TRACING and settings.LANGSMITH_API_KEY:
+    os.environ.setdefault("LANGSMITH_TRACING", "true")
+    os.environ.setdefault("LANGSMITH_API_KEY", settings.LANGSMITH_API_KEY)
+    os.environ.setdefault("LANGSMITH_PROJECT", settings.LANGSMITH_PROJECT)
