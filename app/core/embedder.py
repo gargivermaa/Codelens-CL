@@ -90,15 +90,30 @@ def _point_id(chunk: CodeChunk) -> str:
     return str(uuid.uuid5(_POINT_ID_NAMESPACE, key))
 
 
-def _truncate_to_bytes(text: str) -> str:
-    raw = text.encode("utf-8")
+def _split_text_by_bytes(text: str) -> list[str]:
+    """Split text into UTF-8-safe pieces without losing any content."""
+    if not text:
+        return [text]
 
-    if len(raw) <= MAX_INPUT_BYTES:
-        return text
+    pieces = []
+    current = []
+    current_bytes = 0
 
-    return raw[:MAX_INPUT_BYTES].decode(
-        "utf-8", errors="ignore"
-    )
+    for char in text:
+        char_bytes = len(char.encode("utf-8"))
+
+        if current and current_bytes + char_bytes > MAX_INPUT_BYTES:
+            pieces.append("".join(current))
+            current = []
+            current_bytes = 0
+
+        current.append(char)
+        current_bytes += char_bytes
+
+    if current:
+        pieces.append("".join(current))
+
+    return pieces
 
 
 def _make_batches(texts: list[str]) -> list[list[str]]:
@@ -145,6 +160,7 @@ def _normalize_vector(values: list[float]) -> list[float]:
     return [value / norm for value in vector]
 
 
+
 def embed_texts(
     texts: list[str],
     client=None,
@@ -153,33 +169,29 @@ def embed_texts(
     """
     Embed texts using Gemini.
 
-    Document chunks use RETRIEVAL_DOCUMENT.
-    Day 10 search queries will use CODE_RETRIEVAL_QUERY.
+    Long inputs are split into UTF-8-safe pieces.
+    Their vectors are combined into one normalized vector per original input.
     """
     if not texts:
         return EmbeddingResult(vectors=[], total_tokens=0)
 
-    inputs = [_truncate_to_bytes(text) for text in texts]
-
-    truncated = sum(
-        original != shortened
-        for original, shortened in zip(texts, inputs)
-    )
-
-    if truncated:
-        logger.warning(
-            "%d input(s) exceeded %d bytes and were truncated",
-            truncated,
-            MAX_INPUT_BYTES,
-        )
+    # Split long inputs without losing any content.
+    pieces_per_text = [
+        _split_text_by_bytes(text) for text in texts
+    ]
+    flat_inputs = [
+        piece
+        for pieces in pieces_per_text
+        for piece in pieces
+    ]
 
     client = client or get_gemini_client()
 
-    vectors: list[list[float]] = []
+    piece_vectors: list[list[float]] = []
     total_tokens = 0
     usage_available = True
 
-    for batch in _make_batches(inputs):
+    for batch in _make_batches(flat_inputs):
         response = client.models.embed_content(
             model=EMBEDDING_MODEL,
             contents=batch,
@@ -198,7 +210,9 @@ def embed_texts(
             )
 
         for item in embeddings:
-            vectors.append(_normalize_vector(item.values))
+            piece_vectors.append(
+                _normalize_vector(item.values)
+            )
 
             statistics = getattr(item, "statistics", None)
             token_count = getattr(statistics, "token_count", None)
@@ -206,19 +220,51 @@ def embed_texts(
             if token_count is None:
                 usage_available = False
             else:
-                 total_tokens += int(token_count)
-            
+                total_tokens += int(token_count)
 
-    if len(vectors) != len(texts):
+    if len(piece_vectors) != len(flat_inputs):
         raise RuntimeError(
-            f"Embedding count mismatch: sent {len(texts)}, "
-            f"got {len(vectors)}"
+            f"Embedding count mismatch: sent {len(flat_inputs)}, "
+            f"got {len(piece_vectors)}"
         )
+
+    # Combine piece vectors into one vector per original input.
+    vectors = []
+    offset = 0
+
+    for pieces in pieces_per_text:
+        count = len(pieces)
+        group_vectors = piece_vectors[offset:offset + count]
+        offset += count
+
+        
+        # A single-piece input already has its final normalized vector.
+        if count == 1:
+            vectors.append(group_vectors[0])
+            continue
+
+        weights = [
+            max(1, len(piece.encode("utf-8")))
+            for piece in pieces
+        ]
+        total_weight = sum(weights)
+
+        combined = [
+            sum(
+                vector[i] * weight
+                for vector, weight in zip(group_vectors, weights)
+            ) / total_weight
+            for i in range(EMBEDDING_DIMENSIONS)
+        ]
+
+        vectors.append(_normalize_vector(combined))
+
 
     return EmbeddingResult(
         vectors=vectors,
         total_tokens=total_tokens if usage_available else None,
     )
+
 
 
 def _existing_point_ids(

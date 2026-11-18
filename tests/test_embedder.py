@@ -243,12 +243,41 @@ def test_point_id_golden_value_guards_against_accidental_id_changes():
     assert _point_id(chunk_source(SAMPLE, "x.py")[0]) == "0c938445-c3a6-59bf-b30c-cf452de0ce3f"
 
 
-def test_oversized_input_is_truncated_to_the_byte_limit_before_embedding():
+
+def test_oversized_input_is_split_without_losing_content():
     fake = FakeGemini()
-    embed_texts(["x" * (embedder.MAX_INPUT_BYTES + 5000), "small"], fake)
-    sent = fake.calls[0]
-    assert len(sent[0].encode("utf-8")) == embedder.MAX_INPUT_BYTES
-    assert sent[1] == "small"
+    original = "x" * (embedder.MAX_INPUT_BYTES * 3 + 500)
+
+    result = embed_texts([original, "small"], fake)
+
+    sent_pieces = [
+        piece
+        for batch in fake.calls
+        for piece in batch
+    ]
+
+    assert "".join(sent_pieces[:-1]) == original
+    assert sent_pieces[-1] == "small"
+    assert all(
+        len(piece.encode("utf-8")) <= embedder.MAX_INPUT_BYTES
+        for piece in sent_pieces
+    )
+    assert len(result.vectors) == 2
+    assert len(result.vectors[0]) == EMBEDDING_DIMENSIONS
+    assert len(result.vectors[1]) == EMBEDDING_DIMENSIONS
+
+
+def test_split_text_by_bytes_preserves_unicode():
+    original = "hello 🌍 " * 1000
+
+    pieces = embedder._split_text_by_bytes(original)
+
+    assert "".join(pieces) == original
+    assert all(
+        len(piece.encode("utf-8")) <= embedder.MAX_INPUT_BYTES
+        for piece in pieces
+    )
+
 
 
 
