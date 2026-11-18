@@ -1,6 +1,7 @@
 """
-Embedder/indexer tests. No network: OpenAI is replaced by a deterministic fake
-and Qdrant runs in qdrant-client's in-memory mode.
+Embedder/indexer tests. No network: Gemini is replaced by a deterministic fake
+(or by the real SDK talking to an HTTP mock transport) and Qdrant runs in
+qdrant-client's in-memory mode.
 """
 import json
 import httpx2
@@ -21,7 +22,6 @@ from app.core.embedder import (
     _point_id,
     collection_name,
     embed_texts,
-    # get_gemini_client,
     get_gemini_client,
     index_repository,
 )
@@ -33,17 +33,6 @@ def _vec(text: str) -> list[float]:
     rng = random.Random(text)
     return [rng.random() + 0.01 for _ in range(EMBEDDING_DIMENSIONS)]
 
-
-# class FakeGemini:
-#     def __init__(self):
-#         self.calls: list[list[str]] = []
-#         self.embeddings = self
-
-#     def create(self, model, input):
-#         self.calls.append(list(input))
-#         data = [SimpleNamespace(index=i, embedding=_vec(t)) for i, t in enumerate(input)]
-#         data.reverse()  # the API does not guarantee list order; embed_texts must use `index`
-#         return SimpleNamespace(data=data, usage=SimpleNamespace(total_tokens=sum(len(t) for t in input)))
 
 
 class FakeGemini:
@@ -83,13 +72,6 @@ class ExplodingGemini:
         raise RuntimeError("Gemini is down")
 
 
-# class ExplodingOpenAI:
-#     def __init__(self):
-#         self.embeddings = self
-
-#     def create(self, model, input):
-#         raise RuntimeError("Gemini is down")
-
 
 @pytest.fixture
 def qdrant():
@@ -115,7 +97,6 @@ def test_embed_texts_returns_vectors_in_input_order_and_sums_tokens(monkeypatch)
     texts = ["one", "two", "three", "four", "five"]
     result = embed_texts(texts, fake)
     assert len(fake.calls) == 3  # 2 + 2 + 1
-    # assert result.vectors == [_vec(t) for t in texts]
     assert result.vectors == [
     embedder._normalize_vector(_vec(t)) for t in texts
 ]
@@ -178,7 +159,8 @@ def test_gemini_failure_leaves_existing_index_intact(qdrant):
     chunks = chunk_source(SAMPLE, "x.py")
     index_repository(9, chunks, FakeGemini(), qdrant)
     with pytest.raises(RuntimeError, match="Gemini is down"):
-        index_repository(9, chunks[:1], ExplodingGemini(), qdrant)
+        # Changed code forces a real embedding call (unchanged chunks are reused).
+        index_repository(9, chunk_source(SAMPLE_V2, "x.py"), ExplodingGemini(), qdrant)
     assert qdrant.count("repo_9", exact=True).count == len(chunks)
 
 
@@ -389,3 +371,139 @@ def test_gemini_sdk_roundtrip_with_http_mock():
     finally:
         client.close()
 
+
+
+# --- Day 9 hardening: incremental indexing, split parts, errors, query task type ---
+
+def test_unchanged_chunks_are_not_re_embedded(qdrant):
+    index_repository(11, chunk_source(SAMPLE, "x.py"), FakeGemini(), qdrant)
+    fake = FakeGemini()
+    result = index_repository(11, chunk_source(SAMPLE, "x.py"), fake, qdrant)
+    assert fake.calls == [] and result.reused == 4 and result.embedded == 0
+
+
+def test_only_changed_and_new_chunks_are_embedded_and_deleted_code_is_pruned(qdrant):
+    index_repository(12, chunk_source(SAMPLE, "x.py"), FakeGemini(), qdrant)
+    fake = FakeGemini()
+    result = index_repository(12, chunk_source(SAMPLE_V2, "x.py"), fake, qdrant)
+    sent = [t for call in fake.calls for t in call]
+    assert len(sent) == 2 and any("return 100" in t for t in sent)   # changed a + new z
+    assert result.pruned == 3                                        # b, C, C.m deleted
+    assert qdrant.count("repo_12", exact=True).count == 2
+
+
+def test_changed_file_moved_lines_get_new_ids_and_old_ones_pruned(qdrant):
+    index_repository(13, chunk_source(SAMPLE, "x.py"), FakeGemini(), qdrant)
+    shifted = b"\n\n" + SAMPLE   # every unit moves down two lines
+    index_repository(13, chunk_source(shifted, "x.py"), FakeGemini(), qdrant)
+    assert set(_snapshot(qdrant, "repo_13")) == {_point_id(c) for c in chunk_source(shifted, "x.py")}
+
+
+def test_split_parts_get_unique_deterministic_ids_and_unsplit_ids_are_unchanged(monkeypatch):
+    from app.core import chunker
+    big = ("def big():\n" + "".join(f"    v{i} = {i}\n" for i in range(400))).encode()
+    parts = chunk_source(big, "big.py")
+    assert len(parts) > 1
+    ids = [_point_id(p) for p in parts]
+    assert len(set(ids)) == len(ids)
+    assert ids == [_point_id(p) for p in chunk_source(big, "big.py")]
+    # Unsplit chunk ids keep the Day 8 golden value.
+    assert _point_id(chunk_source(SAMPLE, "x.py")[0]) == "0c938445-c3a6-59bf-b30c-cf452de0ce3f"
+
+
+def test_index_embeds_split_parts_with_header_and_never_truncates(qdrant):
+    big = ("def big():\n" + "".join(f"    v{i} = {i}\n" for i in range(400))).encode()
+    parts = chunk_source(big, "big.py")
+    fake = FakeGemini()
+    index_repository(14, parts, fake, qdrant)
+    sent = [t for call in fake.calls for t in call]
+    assert sent == [p.embed_text for p in parts]
+    assert all(len(t.encode()) <= embedder.MAX_INPUT_BYTES for t in sent)
+    stored = "\n".join(p.payload["text"] for p in qdrant.scroll("repo_14", limit=1000)[0])
+    assert all(f"v{i} = {i}" in stored for i in range(400))       # no code lost
+
+
+def test_documents_over_the_limit_raise_instead_of_truncating():
+    with pytest.raises(ValueError, match="refusing to truncate"):
+        embed_texts(["x" * (embedder.MAX_INPUT_BYTES + 1)], FakeGemini(), allow_truncation=False)
+
+
+def test_query_embedding_uses_code_retrieval_query_task_type():
+    fake = FakeGemini()
+    vector = embedder.embed_query("def changed(): pass", fake)
+    assert fake.configs[0].task_type == "CODE_RETRIEVAL_QUERY"
+    assert len(vector) == EMBEDDING_DIMENSIONS
+    assert abs(sum(v * v for v in vector) - 1.0) < 1e-9          # L2-normalized
+
+
+class _BadGemini:
+    def __init__(self, embeddings):
+        self.models = self
+        self._embeddings = embeddings
+
+    def embed_content(self, model, contents, config):
+        return SimpleNamespace(embeddings=self._embeddings)
+
+
+@pytest.mark.parametrize("embeddings, match", [
+    ([SimpleNamespace(values=[0.1] * 768, statistics=None)], "1536 dimensions"),
+    ([SimpleNamespace(values=[0.0] * 1536, statistics=None)], "zero"),
+    ([SimpleNamespace(values=None, statistics=None)], "empty"),
+    ([], "count mismatch"),
+])
+def test_invalid_gemini_responses_are_rejected(embeddings, match):
+    with pytest.raises(embedder.EmbeddingError, match=match):
+        embed_texts(["def a(): pass"], _BadGemini(embeddings))
+
+
+def _sdk_client(handler, attempts=1):
+    return genai.Client(
+        api_key="test-key",
+        http_options=types.HttpOptions(
+            client_args={"transport": httpx2.MockTransport(handler)},
+            retry_options=types.HttpRetryOptions(attempts=attempts, initial_delay=0.01, max_delay=0.02,
+                                                 http_status_codes=[429, 503]),
+        ),
+    )
+
+
+def _quota_response():
+    return httpx2.Response(429, json={"error": {"code": 429, "status": "RESOURCE_EXHAUSTED",
+                                                "message": "Quota exceeded"}})
+
+
+def test_rate_limit_is_retried_then_succeeds():
+    calls = {"n": 0}
+
+    def handler(request):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return _quota_response()
+        body = json.loads(request.content)
+        return httpx2.Response(200, json={"embeddings": [{"values": _vec(str(i))} for i in body["requests"]]})
+
+    client = _sdk_client(handler, attempts=3)
+    try:
+        assert len(embed_texts(["alpha"], client).vectors) == 1
+        assert calls["n"] == 2
+    finally:
+        client.close()
+
+
+def test_exhausted_quota_raises_a_clear_quota_error_and_keeps_index(qdrant):
+    index_repository(15, chunk_source(SAMPLE, "x.py"), FakeGemini(), qdrant)
+    before = _snapshot(qdrant, "repo_15")
+    client = _sdk_client(lambda request: _quota_response(), attempts=2)
+    try:
+        with pytest.raises(embedder.EmbeddingQuotaError, match="quota"):
+            index_repository(15, chunk_source(SAMPLE_V2, "x.py"), client, qdrant)
+    finally:
+        client.close()
+    assert _snapshot(qdrant, "repo_15") == before
+
+
+def test_collection_with_wrong_dimension_is_reported(qdrant):
+    from qdrant_client.models import Distance, VectorParams
+    qdrant.create_collection("repo_16", vectors_config=VectorParams(size=768, distance=Distance.COSINE))
+    with pytest.raises(RuntimeError, match="768-dim"):
+        index_repository(16, chunk_source(SAMPLE, "x.py"), FakeGemini(), qdrant)
