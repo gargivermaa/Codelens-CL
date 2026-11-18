@@ -14,7 +14,7 @@ Status keys:
 | 1 | Existing and new tests pass | ✅ | 168 passed (this environment); 157 on the owner's laptop before the latest additions |
 | 2 | IDOR benchmark re-run after the fix | ⏳ | r03 is in the v2 **dev** split: `python -m app.evaluation.run review --config llm_context --split dev` |
 | 3 | Reproducible raw outputs | ✅ | every run stores run id, dataset and prompt hashes, model, generation config, raw model output, tokens, latency, failures |
-| 4 | Rules vs LLM-only vs LLM+context | ✅ framework / ⏳ LLM numbers | rules measured on holdout; `--config all --split holdout` on the laptop gives the LLM numbers |
+| 4 | Rules vs LLM-only vs LLM+context | 🟡 | holdout: rules P 1.00 / R 0.24 / F1 0.385; LLM only P 0.889 / R 0.762 / F1 0.821 (both measured, 0 failures); ⏳ llm_context (embedding quota) |
 | 5 | Honest retrieval evaluation | ✅ framework / ⏳ dense numbers | 40 queries, NDCG@5, validation-only sweep; BM25 measured; dense/hybrid need the key |
 | 6 | All dashboard screens with real data | ✅ | 7 screens incl. Evaluation; verified with persisted reviews and real benchmark files; no console errors; no overflow at 390 px |
 | 7 | Docker stack on the Windows laptop | ✅ | owner's laptop: all services up, api healthy, dashboard served |

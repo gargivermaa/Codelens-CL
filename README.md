@@ -371,6 +371,7 @@ Measured so far:
 | Run | Precision | Recall | Clean-PR FP |
 |---|---|---|---|
 | Rules only, v2 holdout (28 PRs) | 1.00 | 0.24 (5/21) | 0% |
+| LLM only (no repository context), v2 holdout, `gemini-3.5-flash-lite` | 0.889 | 0.762 (16/21) | 0% |
 | LLM + context, v1 (11 PRs, `gemini-3.5-flash-lite`) | 0.875 | 0.875 (7/8) | 0% |
 
 | Retrieval | P@1 | MRR |

@@ -113,8 +113,8 @@ run with a clear error, so re-run the next day.
 
 | Split | Config | Precision | Recall | F1 | Clean-PR FP | Notes |
 |---|---|---|---|---|---|---|
-| holdout (v2) | rules | 1.000 | 0.238 (5/21) | 0.385 | 0% | measured 18 Nov, no API needed |
-| holdout (v2) | llm | *not yet run* | | | | run on the owner's laptop |
+| holdout (v2) | rules | 1.000 | 0.238 (5/21) | 0.385 | 0% | measured 18 Nov; identical on two machines |
+| holdout (v2) | llm, `gemini-3.5-flash-lite` | 0.889 | 0.762 (16/21) | 0.821 | 0% | measured 18 Nov, owner's laptop; 0 API failures; category acc. 0.941, exact line 1.000, duplicate rate 0.056 |
 | holdout (v2) | llm_context | *not yet run* | | | | run on the owner's laptop |
 | v1 (11 cases) | rules | 1.000 | 0.375 (3/8) | | 0% | earlier benchmark, lenient v1 matching |
 | v1 (11 cases) | llm_context, `gemini-3.5-flash-lite` | 0.875 | 0.875 (7/8) | | 0% | earlier benchmark, before the IDOR routing fix |

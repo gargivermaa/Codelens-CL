@@ -84,6 +84,8 @@ measured so far:
 
 * **Rules only, holdout (28 PRs):** precision 1.00, recall 0.24, 0% false positives
   on clean PRs. Precise, but they catch only well-known API misuse.
+* **LLM only (no repository context), holdout:** precision 0.889, recall 0.762,
+  F1 0.821, 0% clean-PR false positives, category accuracy 0.941.
 * **LLM + context, v1 (11 PRs, before the routing fix):** precision 0.875, recall
   0.875, 0% clean-PR false positives with `gemini-3.5-flash-lite`.
 * **Retrieval:** BM25 P@1 0.933 / MRR 0.967 on the v1 queries. Dense 0.733 / 0.867.
