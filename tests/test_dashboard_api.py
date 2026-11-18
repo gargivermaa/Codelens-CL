@@ -122,3 +122,18 @@ def test_ping_and_installation_events(monkeypatch):
     assert _signed(added, "installation_repositories").json()["repositories"] == 1
     assert calls[0] == {"installation_id": 42,
                         "repositories": [{"id": 1, "full_name": "me/codelens-demo", "private": False}]}
+
+
+def test_older_reports_with_degraded_retrieval_are_marked_invalid(client, monkeypatch, tmp_path):
+    import json as _json
+    from app.api import dashboard
+    monkeypatch.setattr(dashboard, "BENCHMARK_RESULTS", tmp_path)
+    old = {"benchmark": "review", "config": "llm_context", "split": "holdout", "measured": True,
+           "run_id": "review-llm_context-holdout-old", "api_failures": 0,
+           "confirmed_only": {"precision": 0.85}, "cases": [
+               {"id": "h01", "errors": ["Retrieval degraded: dense retrieval unavailable, BM25 only: quota"],
+                "api_failures": 0},
+               {"id": "h02", "errors": [], "api_failures": 0}]}
+    (tmp_path / "review-llm_context-holdout-old.json").write_text(_json.dumps(old))
+    summary = client.get("/api/benchmarks").json()["reports"]["review:llm_context:holdout"]
+    assert summary["valid"] is False and summary["retrieval_degraded_cases"] == 1

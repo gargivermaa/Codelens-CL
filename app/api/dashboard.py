@@ -281,6 +281,14 @@ def _summarize_report(path: Path, report: dict) -> dict:
     if report.get("benchmark") == "review" and "cases_with_errors" not in report:
         llm_mode = (report.get("config") or report.get("mode")) not in ("rules", None)
         summary["cases_with_errors"] = sum(1 for c in cases if c.get("errors")) if llm_mode else 0
+    if report.get("benchmark") == "review" and "valid" not in report and cases:
+        # Reports written before the `valid` flag existed: derive it from the cases,
+        # so a run with failed LLM calls or degraded retrieval is never shown as valid.
+        degraded = sum(1 for c in cases if any("degraded" in e for e in c.get("errors", [])))
+        failures = sum(c.get("api_failures", 0) for c in cases)
+        summary["retrieval_degraded_cases"] = degraded
+        summary["api_failures"] = summary.get("api_failures", failures)
+        summary["valid"] = degraded == 0 and failures == 0
     for block in ("confirmed_only", "including_possible"):
         if isinstance(summary.get(block), dict):
             summary[block] = {k: v for k, v in summary[block].items() if k != "per_case"}
