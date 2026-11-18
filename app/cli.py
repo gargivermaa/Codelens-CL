@@ -66,6 +66,16 @@ def _cmd_review(args):
     print(json.dumps(result, indent=2, default=str))
 
 
+def _cmd_models(args):
+    """List models this API key can use for text generation and embeddings."""
+    from app.core.embedder import get_gemini_client
+    client = get_gemini_client()
+    for model in client.models.list():
+        actions = getattr(model, "supported_actions", None) or []
+        if args.all or "generateContent" in actions or "embedContent" in actions:
+            print(f"{model.name:45} {','.join(actions)}")
+
+
 def main() -> None:
     configure_logging()
     parser = argparse.ArgumentParser(prog="python -m app.cli")
@@ -95,6 +105,10 @@ def main() -> None:
     p.add_argument("--installation-id", type=int)
     p.add_argument("--no-post", action="store_true", help="store the review but do not post it")
     p.set_defaults(func=_cmd_review)
+
+    p = sub.add_parser("models", help="list Gemini models available to your API key")
+    p.add_argument("--all", action="store_true")
+    p.set_defaults(func=_cmd_models)
 
     args = parser.parse_args()
     args.func(args)

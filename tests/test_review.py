@@ -301,3 +301,14 @@ def test_llm_quota_exhaustion_raises_quota_error():
             GeminiReviewLLM(client=client, model="m").generate("s", "p", LLMFindingList)
     finally:
         client.close()
+
+
+def test_unknown_model_stops_the_review_instead_of_degrading_silently():
+    from app.review.llm import LLMConfigurationError
+    client = _sdk(lambda r: httpx2.Response(404, json={"error": {"code": 404, "status": "NOT_FOUND",
+                                                                 "message": "model not available"}}))
+    try:
+        with pytest.raises(LLMConfigurationError, match="GEMINI_REVIEW_MODEL"):
+            run(GeminiReviewLLM(client=client, model="gone-model"))
+    finally:
+        client.close()

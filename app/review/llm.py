@@ -31,6 +31,14 @@ class LLMQuotaError(LLMError):
     """Free-tier quota / rate limit exhausted (retry later; never switch to paid)."""
 
 
+class LLMConfigurationError(RuntimeError):
+    """The configured model does not exist / is not available to this key.
+
+    Deliberately NOT an LLMError: the pipeline tolerates LLMError per pass, but a
+    wrong model name must stop the review loudly instead of silently producing
+    rules-only reviews."""
+
+
 @dataclass
 class LLMResult:
     data: BaseModel
@@ -96,6 +104,11 @@ class GeminiReviewLLM:
                 if code == 429 or "RESOURCE_EXHAUSTED" in str(getattr(exc, "status", "")):
                     raise LLMQuotaError(f"Gemini free-tier quota/rate limit exhausted for {self.model}; "
                                         f"retry later. Details: {exc}") from exc
+                if code == 404:
+                    raise LLMConfigurationError(
+                        f"Review model {self.model!r} is not available to this API key. Set "
+                        f"GEMINI_REVIEW_MODEL in .env to a model that is free of charge on the "
+                        f"free tier (python -m app.cli models lists available ones). Details: {exc}") from exc
                 raise LLMError(f"Gemini request failed: {exc}") from exc
 
             usage = getattr(response, "usage_metadata", None)
