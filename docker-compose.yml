@@ -28,6 +28,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: codelens
+    ports:
+      - "5432:5432"   # reachable from the host for alembic, pytest and the CLI
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -37,6 +39,8 @@ services:
 
   redis:
     image: redis:7
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
