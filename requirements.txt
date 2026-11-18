@@ -2,31 +2,36 @@
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 python-dotenv==1.0.1
-pydantic==2.10.4
-pydantic-settings==2.7.1
+pydantic==2.12.5
+pydantic-settings==2.12.0
 requests==2.32.3
 
 # Testing
 pytest==8.3.4
 httpx==0.28.1
 
---- Added Day 3-4 (PostgreSQL) ---
+# --- Added Day 3-4 (PostgreSQL) ---
 sqlalchemy==2.0.36
 alembic==1.14.0
 psycopg2-binary==2.9.10
 
---- Added Day 5-6 (Redis + Celery) ---
+# --- Added Day 5-6 (Redis + Celery) ---
 celery==5.4.0
 redis==6.4.0
 
---- Added Day 7 (Tree-sitter chunking) ---
+# --- Added Day 7 (Tree-sitter chunking) ---
 tree-sitter==0.23.2
 tree-sitter-python==0.23.6
 
---- Added Day 8-9 (Embeddings + Qdrant) ---
+# --- Added Day 8-9 (Embeddings + Qdrant) ---
 openai==1.58.1
 qdrant-client==1.12.1
 google-genai==3.5.0
 
-# --- Added Day 15+ (GitHub App integration) ---
-# pygithub==2.5.0
+
+
+
+# --- Day 10+ (Review pipeline, GitHub App) ---
+langgraph==1.2.22
+PyJWT==2.15.1
+cryptography==50.0.2
