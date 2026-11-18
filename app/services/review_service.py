@@ -105,13 +105,18 @@ def upsert_repository(db: Session, repo_github_id: int, repo_full_name: str,
     return repo_id
 
 
-def claim_review(db: Session, pr_id: int, head_sha: str, base_sha: str) -> tuple[Review | None, str]:
+def claim_review(db: Session, pr_id: int, head_sha: str, base_sha: str,
+                 force: bool = False) -> tuple[Review | None, str]:
     """Create-or-lock the review row for this commit. Returns (review, reason)."""
     db.execute(pg_insert(Review).values(pr_id=pr_id, head_sha=head_sha, base_sha=base_sha, status="pending")
                .on_conflict_do_nothing(constraint="uq_reviews_pr_head_sha"))
     review = db.execute(select(Review).where(Review.pr_id == pr_id, Review.head_sha == head_sha)
                         .with_for_update()).scalar_one()
     now = _utcnow()
+    if force and review.status in ("completed", "analyzed", "failed"):
+        # Explicit re-review (CLI --force): analyze this commit again from scratch.
+        review.status = "pending"
+        review.github_review_id = None
     if review.status == "completed":
         db.commit()
         return None, "already reviewed"
@@ -244,7 +249,7 @@ def post_review(db: Session, review: Review, repo_full_name: str, pr_number: int
 
 def run_review(db: Session, deps: ReviewDeps, repo_github_id: int, repo_full_name: str, pr_number: int,
                installation_id: int | None = None, post: bool | None = None,
-               allow_closed: bool = False) -> dict:
+               allow_closed: bool = False, force: bool = False) -> dict:
     """Review one PR commit. allow_closed=True (CLI only) also reviews closed/merged
     PRs, which is how real historical PRs are evaluated; webhooks never set it."""
     started = time.perf_counter()
@@ -262,7 +267,7 @@ def run_review(db: Session, deps: ReviewDeps, repo_github_id: int, repo_full_nam
         db.commit()
         return {"status": "skipped", "reason": f"PR is {pull.get('state')}", "pr_id": pr_id}
 
-    review, reason = claim_review(db, pr_id, head_sha, base_sha)
+    review, reason = claim_review(db, pr_id, head_sha, base_sha, force=force)
     if review is None:
         logger.info("Skipping review of %s#%d@%s: %s", repo_full_name, pr_number, head_sha[:7], reason)
         return {"status": "skipped", "reason": reason, "pr_id": pr_id}

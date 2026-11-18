@@ -5,7 +5,7 @@ or from the benchmark JSON files - nothing here is synthesized.
 """
 import json
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -207,7 +207,7 @@ def review_detail(review_id: int, db: Session = Depends(get_db)) -> dict:
 
 @router.get("/analytics")
 def analytics(days: int = Query(30, ge=1, le=365), db: Session = Depends(get_db)) -> dict:
-    since = datetime.utcnow() - timedelta(days=days)
+    since = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
     reviews = db.query(Review).filter(Review.created_at >= since).order_by(Review.created_at).all()
     history: dict[str, dict] = {}
     for r in reviews:

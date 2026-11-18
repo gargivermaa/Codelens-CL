@@ -507,3 +507,90 @@ def test_collection_with_wrong_dimension_is_reported(qdrant):
     qdrant.create_collection("repo_16", vectors_config=VectorParams(size=768, distance=Distance.COSINE))
     with pytest.raises(RuntimeError, match="768-dim"):
         index_repository(16, chunk_source(SAMPLE, "x.py"), FakeGemini(), qdrant)
+
+
+# --- Free-tier pacing (found on a real run: the quota counts every input of a batch) ---
+
+class _Clock:
+    def __init__(self):
+        self.now = 1000.0
+        self.sleeps = []
+
+    def monotonic(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+        self.now += seconds
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    c = _Clock()
+    monkeypatch.setattr(embedder, "_now", c.monotonic)
+    monkeypatch.setattr(embedder, "_sleep", c.sleep)
+    return c
+
+
+def test_input_budget_paces_batches_per_minute(clock, monkeypatch):
+    monkeypatch.setattr(settings, "GEMINI_EMBED_INPUTS_PER_MINUTE", 90)
+    fake = FakeGemini()
+    embed_texts([f"t{i}" for i in range(250)], fake)
+    assert [len(c) for c in fake.calls] == [90, 90, 70]     # batches capped at the budget
+    assert len(clock.sleeps) == 2 and all(55 <= s <= 61 for s in clock.sleeps)
+
+
+def _rate_limited(retry_delay="7s", quota_id="EmbedContentRequestsPerMinutePerUserPerProjectPerModel-FreeTier"):
+    return httpx2.Response(429, json={"error": {"code": 429, "status": "RESOURCE_EXHAUSTED",
+        "message": "Quota exceeded. Please retry in 6.5s.",
+        "details": [{"@type": "type.googleapis.com/google.rpc.QuotaFailure",
+                     "violations": [{"quotaId": quota_id}]},
+                    {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": retry_delay}]}})
+
+
+def test_per_minute_429_waits_the_delay_the_api_asks_for_then_succeeds(clock):
+    calls = {"n": 0}
+
+    def handler(request):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return _rate_limited("7s")
+        body = json.loads(request.content)
+        return httpx2.Response(200, json={"embeddings": [{"values": _vec(str(i))} for i in body["requests"]]})
+
+    client = _sdk_client(handler, attempts=1)
+    try:
+        assert len(embed_texts(["alpha", "beta"], client).vectors) == 2
+    finally:
+        client.close()
+    assert calls["n"] == 2 and 8.0 in clock.sleeps          # 7s from RetryInfo + 1s margin
+
+
+def test_daily_quota_is_not_retried(clock):
+    client = _sdk_client(lambda r: _rate_limited("7s", "EmbedContentRequestsPerDayPerProject-FreeTier"), attempts=1)
+    try:
+        with pytest.raises(embedder.EmbeddingQuotaError):
+            embed_texts(["alpha"], client)
+    finally:
+        client.close()
+    assert clock.sleeps == []
+
+
+def test_quota_failure_midway_keeps_finished_groups_and_rerun_embeds_only_the_rest(qdrant, monkeypatch):
+    monkeypatch.setattr(embedder, "UPSERT_BATCH_SIZE", 2)
+    chunks = chunk_source(SAMPLE, "x.py")                    # 4 chunks -> 2 groups
+
+    class QuotaAfterFirstGroup(FakeGemini):
+        def embed_content(self, model, contents, config):
+            if self.calls:
+                raise embedder.EmbeddingQuotaError("daily quota")
+            return super().embed_content(model, contents, config)
+
+    with pytest.raises(embedder.EmbeddingQuotaError):
+        index_repository(17, chunks, QuotaAfterFirstGroup(), qdrant)
+    assert qdrant.count("repo_17", exact=True).count == 2   # first group kept
+
+    fake = FakeGemini()
+    result = index_repository(17, chunks, fake, qdrant)
+    assert result.reused == 2 and result.embedded == 2 and sum(len(c) for c in fake.calls) == 2
+    assert qdrant.count("repo_17", exact=True).count == 4

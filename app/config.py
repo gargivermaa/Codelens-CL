@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     GEMINI_MAX_ATTEMPTS: int = 5
     # Spacing between Gemini requests from this process (free-tier RPM limits).
     GEMINI_MIN_REQUEST_INTERVAL_S: float = 1.0
+    # Free tier: embedding inputs per minute (every text in a batch counts; the
+    # limit observed on the free tier is 100). Stay below it.
+    GEMINI_EMBED_INPUTS_PER_MINUTE: int = 90
+    # How often to wait-and-retry a per-minute 429 (daily quotas are never retried).
+    GEMINI_RATE_LIMIT_RETRIES: int = 3
 
     # --- Review pipeline ---
     REVIEW_TOP_K: int = 5                 # retrieved context chunks per changed unit

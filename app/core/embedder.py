@@ -29,8 +29,10 @@ Design notes
 import argparse
 import logging
 import math
+import re
 import time
 import uuid
+from collections import deque
 from dataclasses import dataclass
 
 from google import genai
@@ -58,8 +60,11 @@ SCROLL_PAGE_SIZE = 1000
 
 _POINT_ID_NAMESPACE = uuid.UUID("6f1c2f0e-5d0b-4a56-9d52-3c1a7b9e4d10")
 
-# Status codes the SDK retries with exponential backoff (rate limit + transient).
-_RETRY_STATUS_CODES = [408, 429, 500, 502, 503, 504]
+# Transient status codes the SDK retries with exponential backoff. 429 is NOT
+# here: the free tier counts every input of a batch as one request against a
+# per-minute quota, and the server says exactly how long to wait, so 429 is
+# handled below with that delay (short SDK backoffs would only waste quota).
+_RETRY_STATUS_CODES = [408, 500, 502, 503, 504]
 
 
 class EmbeddingError(RuntimeError):
@@ -137,14 +142,15 @@ def _truncate_to_bytes(text: str) -> str:
     return raw[:MAX_INPUT_BYTES].decode("utf-8", errors="ignore")
 
 
-def _make_batches(texts: list[str]) -> list[list[str]]:
+def _make_batches(texts: list[str], max_items: int | None = None) -> list[list[str]]:
     """Split inputs into bounded batches, preserving order."""
+    max_items = max_items or MAX_BATCH_ITEMS
     batches: list[list[str]] = []
     current: list[str] = []
     current_bytes = 0
     for text in texts:
         size = len(text.encode("utf-8"))
-        if current and (len(current) >= MAX_BATCH_ITEMS or current_bytes + size > MAX_BATCH_BYTES):
+        if current and (len(current) >= max_items or current_bytes + size > MAX_BATCH_BYTES):
             batches.append(current)
             current, current_bytes = [], 0
         current.append(text)
@@ -182,14 +188,79 @@ def _classify_api_error(exc: Exception) -> EmbeddingError:
 _last_request_at = 0.0
 
 
+def _now() -> float:
+    return time.monotonic()
+
+
+def _sleep(seconds: float) -> None:
+    time.sleep(seconds)
+
+
+# (timestamp, inputs) of recent embedding requests, for the per-minute input budget.
+_input_window: deque = deque()
+_RETRY_IN = re.compile(r"retry in ([0-9.]+)s", re.IGNORECASE)
+
+
+def _reserve_inputs(count: int) -> None:
+    """Wait until `count` more inputs fit in the free tier's per-minute input quota.
+
+    The free tier limits embedding *inputs* per minute (each text in a batch
+    counts), so a fast loop over 100-input batches exceeds it after one batch.
+    """
+    limit = settings.GEMINI_EMBED_INPUTS_PER_MINUTE
+    if limit <= 0:
+        return
+    while True:
+        now = _now()
+        while _input_window and now - _input_window[0][0] >= 60:
+            _input_window.popleft()
+        used = sum(n for _, n in _input_window)
+        if not _input_window or used + count <= limit:
+            break
+        wait = 60 - (now - _input_window[0][0]) + 0.5
+        logger.info("Free-tier embedding budget: %d/%d inputs used this minute, waiting %.0fs",
+                    used, limit, wait)
+        _sleep(wait)
+    _input_window.append((_now(), count))
+
+
+def _per_minute_retry_delay(exc: Exception) -> float | None:
+    """Seconds to wait for a per-minute 429, or None if not retryable (daily quota, other errors)."""
+    if getattr(exc, "code", None) != 429:
+        return None
+    details = getattr(exc, "details", None) or {}
+    error = details.get("error", details) if isinstance(details, dict) else {}
+    items = error.get("details", []) if isinstance(error, dict) else []
+    text = str(exc)
+    quota_ids = [v.get("quotaId", "") for item in items if isinstance(item, dict)
+                 for v in item.get("violations", []) if isinstance(v, dict)]
+    if any("PerDay" in q for q in quota_ids) or "per day" in text.lower():
+        return None                       # daily quota: waiting a minute will not help
+    for item in items:
+        if isinstance(item, dict) and str(item.get("@type", "")).endswith("RetryInfo"):
+            delay = str(item.get("retryDelay", "")).rstrip("s")
+            try:
+                return float(delay) + 1.0
+            except ValueError:
+                pass
+    match = _RETRY_IN.search(text)
+    if match:
+        return float(match.group(1)) + 1.0
+    if any("PerMinute" in q for q in quota_ids):
+        return 60.0
+    return None
+
+
 def _throttle() -> None:
     """Client-side spacing between requests to stay under free-tier RPM limits."""
     global _last_request_at
     gap = settings.GEMINI_MIN_REQUEST_INTERVAL_S
-    wait = _last_request_at + gap - time.monotonic()
+    if gap <= 0:
+        return
+    wait = _last_request_at + gap - _now()
     if wait > 0:
-        time.sleep(wait)
-    _last_request_at = time.monotonic()
+        _sleep(wait)
+    _last_request_at = _now()
 
 
 def embed_texts(texts: list[str], client=None, task_type: str = DOCUMENT_TASK_TYPE,
@@ -217,19 +288,29 @@ def embed_texts(texts: list[str], client=None, task_type: str = DOCUMENT_TASK_TY
     total_tokens = 0
     usage_available = True
 
-    for batch in _make_batches(inputs):
-        _throttle()
-        try:
-            response = client.models.embed_content(
-                model=EMBEDDING_MODEL,
-                contents=batch,
-                config=types.EmbedContentConfig(
-                    task_type=task_type,
-                    output_dimensionality=EMBEDDING_DIMENSIONS,
-                ),
-            )
-        except genai_errors.APIError as exc:
-            raise _classify_api_error(exc) from exc
+    budget = settings.GEMINI_EMBED_INPUTS_PER_MINUTE
+    max_items = min(MAX_BATCH_ITEMS, budget) if budget > 0 else MAX_BATCH_ITEMS
+    for batch in _make_batches(inputs, max_items):
+        for attempt in range(settings.GEMINI_RATE_LIMIT_RETRIES + 1):
+            _reserve_inputs(len(batch))
+            _throttle()
+            try:
+                response = client.models.embed_content(
+                    model=EMBEDDING_MODEL,
+                    contents=batch,
+                    config=types.EmbedContentConfig(
+                        task_type=task_type,
+                        output_dimensionality=EMBEDDING_DIMENSIONS,
+                    ),
+                )
+                break
+            except genai_errors.APIError as exc:
+                delay = _per_minute_retry_delay(exc)
+                if delay is None or attempt == settings.GEMINI_RATE_LIMIT_RETRIES:
+                    raise _classify_api_error(exc) from exc
+                logger.warning("Gemini per-minute rate limit hit; waiting %.0fs as the API asks "
+                               "(retry %d/%d)", delay, attempt + 1, settings.GEMINI_RATE_LIMIT_RETRIES)
+                _sleep(delay)
 
         embeddings = getattr(response, "embeddings", None) or []
         if len(embeddings) != len(batch):
@@ -325,32 +406,41 @@ def index_repository(repo_github_id: int, chunks: list[CodeChunk], gemini_client
     if progress:
         progress("diff", reused, len(chunks))
 
-    # An API failure must happen before Qdrant is modified.
-    embedding = embed_texts([chunk.embed_text for _, chunk in todo], client=gemini_client,
-                            task_type=DOCUMENT_TASK_TYPE, allow_truncation=False) if todo else \
-        EmbeddingResult(vectors=[], total_tokens=0)
-
-    ensure_collection(qdrant, name)
+    # Embed and store group by group. A failure (e.g. a quota limit) keeps every
+    # group already stored, so a re-run only embeds what is left. Nothing is ever
+    # deleted before all new chunks are stored, and the first API call happens
+    # before Qdrant is touched at all.
     if not chunks:
         logger.warning("No chunks to index for repo %s; collection will be emptied", repo_github_id)
-
-    points = [
-        PointStruct(id=pid, vector=vector, payload=chunk.to_dict())
-        for (pid, chunk), vector in zip(todo, embedding.vectors)
-    ]
-    for start in range(0, len(points), UPSERT_BATCH_SIZE):
-        qdrant.upsert(collection_name=name, points=points[start:start + UPSERT_BATCH_SIZE], wait=True)
-        if progress:
-            progress("upsert", min(start + UPSERT_BATCH_SIZE, len(points)), len(points))
+    total_tokens: int | None = 0
+    collection_ready = False
+    for start in range(0, max(len(todo), 1), UPSERT_BATCH_SIZE):
+        group = todo[start:start + UPSERT_BATCH_SIZE]
+        if group:
+            embedding = embed_texts([chunk.embed_text for _, chunk in group], client=gemini_client,
+                                    task_type=DOCUMENT_TASK_TYPE, allow_truncation=False)
+            if total_tokens is not None and embedding.total_tokens is not None:
+                total_tokens += embedding.total_tokens
+            else:
+                total_tokens = None
+        if not collection_ready:
+            ensure_collection(qdrant, name)
+            collection_ready = True
+        if group:
+            qdrant.upsert(collection_name=name, wait=True, points=[
+                PointStruct(id=pid, vector=vector, payload=chunk.to_dict())
+                for (pid, chunk), vector in zip(group, embedding.vectors)])
+            if progress:
+                progress("upsert", start + len(group), len(todo))
 
     # Only reached when every new chunk is stored.
     pruned = _prune_stale_points(qdrant, name, set(ids), existing_ids=list(existing) or None)
 
     elapsed = time.perf_counter() - started
-    tokens = "unavailable" if embedding.total_tokens is None else str(embedding.total_tokens)
+    tokens = "unavailable" if total_tokens is None else str(total_tokens)
     logger.info("Indexed %d chunks into %s (%d embedded, %d reused, %d pruned, %s embedding tokens, %.1fs)",
                 len(chunks), name, len(todo), reused, pruned, tokens, elapsed)
-    return IndexResult(collection=name, chunks_indexed=len(chunks), total_tokens=embedding.total_tokens,
+    return IndexResult(collection=name, chunks_indexed=len(chunks), total_tokens=total_tokens,
                        elapsed_s=elapsed, embedded=len(todo), reused=reused, pruned=pruned)
 
 

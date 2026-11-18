@@ -170,6 +170,16 @@ def test_closed_pull_request_is_skipped(db):
     assert db.query(Review).count() == 0
 
 
+def test_force_re_reviews_an_already_reviewed_commit(db):
+    github, llm = FakeGitHub(), _llm()
+    first = run_review(db, _deps(github, llm), REPO_ID, "o/r", 7, post=False)
+    calls = len(llm.systems)
+    assert run_review(db, _deps(github, llm), REPO_ID, "o/r", 7, post=False)["status"] == "skipped"
+    again = run_review(db, _deps(github, llm), REPO_ID, "o/r", 7, post=False, force=True)
+    assert again["status"] == "completed" and again["review_id"] == first["review_id"]
+    assert len(llm.systems) > calls and db.query(Review).count() == 1
+
+
 def test_merged_pull_request_can_be_reviewed_explicitly_for_evaluation(db):
     result = run_review(db, _deps(FakeGitHub(state="closed")), REPO_ID, "o/r", 7, post=False, allow_closed=True)
     assert result["status"] == "completed" and result["issues_found"] == 2
