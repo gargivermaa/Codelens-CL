@@ -81,10 +81,25 @@ def test_unknown_ids_return_404(client):
     assert client.get("/api/pulls/999999").status_code == 404
 
 
-def test_benchmarks_endpoint_reads_measured_reports(client):
-    reports = client.get("/api/benchmarks").json()["reports"]
-    assert reports["retrieval"]["measured"] is True and "bm25" in reports["retrieval"]["modes"]
-    assert "per_query" not in reports["retrieval"]["modes"]["bm25"]
+def test_benchmarks_endpoint_reads_measured_reports(client, monkeypatch, tmp_path):
+    from app.api import dashboard
+    from app.evaluation import run as bench
+    monkeypatch.setattr(bench, "RESULTS", tmp_path)
+    monkeypatch.setattr(dashboard, "BENCHMARK_RESULTS", tmp_path)
+    review = bench.run_review("rules", split="holdout")
+    bench._write(review, review["run_id"])
+    retrieval = bench.run_retrieval(["bm25"], 5, "holdout")
+    bench._write(retrieval, retrieval["run_id"])
+
+    data = client.get("/api/benchmarks").json()
+    rules = data["reports"]["review:rules:holdout"]
+    assert rules["measured"] and "cases" not in rules and "per_case" not in rules["confirmed_only"]
+    assert rules["confirmed_only"]["confusion_matrix"]["rows"] == ["security", "bug", "clean"]
+    assert "per_query" not in data["reports"]["retrieval:holdout"]["modes"]["bm25"]
+    full = client.get(f"/api/benchmarks/runs/{review['run_id']}").json()
+    assert len(full["cases"]) == review["n_cases"]
+    assert client.get("/api/benchmarks/runs/..%2F..%2Fetc").status_code in (400, 404)
+    assert client.get("/api/benchmarks/runs/does-not-exist").status_code == 404
 
 
 def _signed(payload, event):

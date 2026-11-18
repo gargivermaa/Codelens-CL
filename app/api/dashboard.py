@@ -253,25 +253,72 @@ def analytics(days: int = Query(30, ge=1, le=365), db: Session = Depends(get_db)
     }
 
 
+def _load_report(path: Path) -> dict | None:
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def _report_key(report: dict) -> str | None:
+    kind = report.get("benchmark")
+    if kind == "review":
+        # v1 reports had only `mode`: "llm" meant LLM + repository context.
+        config = report.get("config") or {"llm": "llm_context"}.get(report.get("mode"), report.get("mode"))
+        return f"review:{config}:{report.get('split', 'v1')}"
+    if kind == "retrieval":
+        return f"retrieval:{report.get('split', 'v1')}"
+    if kind == "retrieval-sweep":
+        return "retrieval-sweep:validation"
+    return None
+
+
+def _summarize_report(path: Path, report: dict) -> dict:
+    summary = {k: v for k, v in report.items() if k not in ("cases", "results")}
+    summary["file"] = path.name
+    summary["run_id"] = report.get("run_id") or path.stem
+    cases = report.get("cases") or []
+    if report.get("benchmark") == "review" and "cases_with_errors" not in report:
+        llm_mode = (report.get("config") or report.get("mode")) not in ("rules", None)
+        summary["cases_with_errors"] = sum(1 for c in cases if c.get("errors")) if llm_mode else 0
+    for block in ("confirmed_only", "including_possible"):
+        if isinstance(summary.get(block), dict):
+            summary[block] = {k: v for k, v in summary[block].items() if k != "per_case"}
+    for mode in (summary.get("modes") or {}).values():
+        if isinstance(mode, dict):
+            mode.pop("per_query", None)
+    if report.get("benchmark") == "retrieval-sweep":
+        summary["results"] = report.get("results", [])
+    return summary
+
+
 @router.get("/benchmarks")
 def benchmarks() -> dict:
-    """Latest measured benchmark report of each kind (files in benchmarks/results)."""
+    """Latest measured report per (benchmark, configuration, split), plus the run list."""
     latest: dict[str, dict] = {}
+    runs = []
     if BENCHMARK_RESULTS.is_dir():
-        for path in sorted(BENCHMARK_RESULTS.glob("*.json")):
-            try:
-                report = json.loads(path.read_text())
-            except (OSError, ValueError):
+        for path in sorted(BENCHMARK_RESULTS.glob("*.json"), key=lambda p: p.stat().st_mtime):
+            report = _load_report(path)
+            key = _report_key(report) if report else None
+            if key is None:
                 continue
-            kind = report.get("benchmark", "unknown")
-            if kind == "review":
-                kind = f"review-{report.get('mode')}"
-            cases = report.pop("cases", None) or []
-            if cases:
-                # A review run where LLM passes failed is not an LLM result; surface it.
-                report["cases_with_errors"] = sum(1 for c in cases if c.get("errors"))
-            for mode in (report.get("modes") or {}).values():
-                if isinstance(mode, dict):
-                    mode.pop("per_query", None)
-            latest[kind] = {"file": path.name, **report}
-    return {"reports": latest}
+            summary = _summarize_report(path, report)
+            latest[key] = summary
+            runs.append({"run_id": summary["run_id"], "key": key, "file": path.name,
+                         "timestamp": (report.get("environment") or {}).get("timestamp")})
+    return {"reports": latest, "runs": list(reversed(runs))}
+
+
+@router.get("/benchmarks/runs/{run_id}")
+def benchmark_run(run_id: str) -> dict:
+    """Full report of one run, including every case (for case inspection)."""
+    if not run_id.replace("-", "").replace("_", "").replace(".", "").isalnum():
+        raise HTTPException(status_code=400, detail="Invalid run id")
+    path = BENCHMARK_RESULTS / f"{run_id}.json"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Benchmark run not found")
+    report = _load_report(path)
+    if report is None:
+        raise HTTPException(status_code=500, detail="Unreadable report")
+    return report

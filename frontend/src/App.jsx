@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
-import { BarChart3, FolderGit2, GitPullRequest, LayoutDashboard, Menu, ScanSearch, X } from "lucide-react";
+import { BarChart3, FlaskConical, FolderGit2, GitPullRequest, LayoutDashboard, Menu, ScanSearch, X } from "lucide-react";
 import Overview from "./pages/Overview.jsx";
 import Repositories from "./pages/Repositories.jsx";
 import RepositoryDetail from "./pages/RepositoryDetail.jsx";
@@ -8,6 +8,7 @@ import PullRequests from "./pages/PullRequests.jsx";
 import ReviewDetail from "./pages/ReviewDetail.jsx";
 import PullDetail from "./pages/PullDetail.jsx";
 import Analytics from "./pages/Analytics.jsx";
+import Evaluation from "./pages/Evaluation.jsx";
 import { Empty } from "./components/ui.jsx";
 
 const NAV = [
@@ -15,6 +16,7 @@ const NAV = [
   { to: "/repositories", label: "Repositories", Icon: FolderGit2 },
   { to: "/pulls", label: "Pull requests", Icon: GitPullRequest },
   { to: "/analytics", label: "Analytics", Icon: BarChart3 },
+  { to: "/evaluation", label: "Evaluation", Icon: FlaskConical },
 ];
 
 function Sidebar({ onNavigate }) {
@@ -69,6 +71,7 @@ export default function App() {
             <Route path="/pulls/:prId" element={<PullDetail />} />
             <Route path="/review/:reviewId" element={<ReviewDetail />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/evaluation" element={<Evaluation />} />
             <Route path="*" element={<Empty title="Page not found">Use the navigation on the left.</Empty>} />
           </Routes>
         </div>

@@ -1,70 +1,16 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { FlaskConical } from "lucide-react";
 import { useApi } from "../api.js";
 import { Card, Empty, ErrorState, Loading, PageHeader, StatCard } from "../components/ui.jsx";
 import { CATEGORICAL, DailyBars, HistoryChart, HorizontalBars, RiskDistributionChart } from "../components/charts.jsx";
 
-const MODE_LABEL = { bm25: "BM25", dense: "Dense", hybrid: "Hybrid (RRF)" };
 const duration = (ms) => (ms == null ? "—" : ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`);
 
-const pct = (v) => (v == null ? "—" : `${Math.round(v * 1000) / 10}%`);
-const num = (v) => (v == null ? "—" : v.toFixed(3));
-
-function RetrievalTable({ report }) {
-  const k = report.k;
-  const modes = Object.entries(report.modes || {});
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[520px] text-sm">
-        <thead><tr className="border-b border-line">
-          {["Mode", "P@1", "P@3", `P@${k}`, `R@${k}`, "MRR", "Median latency"].map((h) => <th key={h} className="table-head px-3 py-2 first:pl-0">{h}</th>)}
-        </tr></thead>
-        <tbody>{modes.map(([mode, m]) => (
-          <tr key={mode} className="border-b border-line/60 last:border-0">
-            <td className="py-2 pr-3 font-medium">{MODE_LABEL[mode] || mode}</td>
-            {m.skipped ? <td colSpan={6} className="px-3 py-2 text-xs text-muted">skipped: {m.skipped}</td> : (<>
-              <td className="px-3 py-2 tabular-nums">{num(m["precision@1"])}</td>
-              <td className="px-3 py-2 tabular-nums">{num(m["precision@3"])}</td>
-              <td className="px-3 py-2 tabular-nums">{num(m[`precision@${k}`])}</td>
-              <td className="px-3 py-2 tabular-nums">{num(m[`recall@${k}`])}</td>
-              <td className="px-3 py-2 tabular-nums">{num(m.mrr)}</td>
-              <td className="px-3 py-2 tabular-nums">{m.latency?.median_ms != null ? `${m.latency.median_ms} ms` : "—"}</td>
-            </>)}
-          </tr>))}</tbody>
-      </table>
-    </div>
-  );
-}
-
-function ReviewBenchmark({ report, label }) {
-  const c = report.confirmed_only || {};
-  const llm = report.mode === "llm";
-  return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <div className="text-sm font-medium">{label}</div>
-        <div className="text-xs text-muted">{llm ? `model ${report.environment?.review_model} · ` : ""}{report.file}</div>
-      </div>
-      {llm && report.cases_with_errors > 0 && (
-        <div className="mb-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-ink">
-          {report.cases_with_errors} case(s) had pipeline errors — this run does not measure the LLM fully.
-        </div>
-      )}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div><div className="text-xs text-muted">Precision</div><div className="text-xl font-semibold tabular-nums">{pct(c.finding_precision)}</div></div>
-        <div><div className="text-xs text-muted">Recall</div><div className="text-xl font-semibold tabular-nums">{pct(c.finding_recall)}</div></div>
-        <div><div className="text-xs text-muted">Clean-PR false positives</div><div className="text-xl font-semibold tabular-nums">{pct(c.clean_case_false_positive_rate)}</div></div>
-        <div><div className="text-xs text-muted">Detected / seeded</div><div className="text-xl font-semibold tabular-nums">{c.true_positives ?? "—"} / {c.expected ?? "—"}</div></div>
-      </div>
-    </div>
-  );
-}
 
 export default function Analytics() {
   const [days, setDays] = useState(30);
   const { data, error, loading, reload } = useApi(`/api/analytics?days=${days}`);
-  const bench = useApi("/api/benchmarks");
-  const reports = bench.data?.reports || {};
 
   return (
     <>
@@ -116,23 +62,13 @@ export default function Analytics() {
             )}
           </Card>
 
-          <Card title="Evaluation benchmarks" subtitle="Measured runs from benchmarks/results (python -m app.evaluation.run …)">
-            {bench.loading ? <Loading /> : bench.error ? <ErrorState error={bench.error} onRetry={bench.reload} /> :
-              !Object.keys(reports).length ? (
-                <Empty title="No benchmark reports yet" Icon={FlaskConical}>Run <code>python -m app.evaluation.run retrieval</code> and <code>python -m app.evaluation.run review --mode llm</code>.</Empty>
-              ) : (
-                <div className="space-y-8">
-                  {reports.retrieval && (<div>
-                    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                      <div className="text-sm font-medium">Retrieval — {reports.retrieval.queries} labelled queries, {reports.retrieval.corpus_chunks} chunks</div>
-                      <div className="text-xs text-muted">{reports.retrieval.file}</div>
-                    </div>
-                    <RetrievalTable report={reports.retrieval} />
-                  </div>)}
-                  {reports["review-llm"] && <ReviewBenchmark report={reports["review-llm"]} label="Review — LLM + hybrid context" />}
-                  {reports["review-rules"] && <ReviewBenchmark report={reports["review-rules"]} label="Review — deterministic rules only" />}
-                </div>
-              )}
+          <Card title="Evaluation benchmarks">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
+              <span>Measured precision / recall / F1 for rules vs LLM vs LLM + repository context, retrieval comparison and per-case inspection.</span>
+              <Link to="/evaluation" className="focus-ring inline-flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-xs text-ink hover:bg-raised">
+                <FlaskConical className="h-3.5 w-3.5" aria-hidden />Open evaluation
+              </Link>
+            </div>
           </Card>
         </div>
       )}
