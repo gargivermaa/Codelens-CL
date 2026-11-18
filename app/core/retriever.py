@@ -63,6 +63,12 @@ class RetrievalResult:
     candidates: dict = field(default_factory=dict)
 
 
+def bm25_document(payload: dict) -> list[str]:
+    """Tokens BM25 indexes for a chunk. File path and qualified name are
+    included so a query mentioning "auth/session.py" or "SessionStore" matches."""
+    return tokenize(f"{payload.get('file', '')} {payload.get('qualified_name', '')} {payload.get('text', '')}")
+
+
 def _unit_key(payload: dict) -> tuple:
     return payload.get("file"), payload.get("qualified_name"), payload.get("type")
 
@@ -95,10 +101,7 @@ class HybridRetriever:
                 payloads.append(point.payload or {})
             if offset is None:
                 break
-        # File path and qualified name are indexed too: a query mentioning
-        # "auth/session.py" or "SessionStore" should match by name.
-        docs = [tokenize(f"{p.get('file', '')} {p.get('qualified_name', '')} {p.get('text', '')}")
-                for p in payloads]
+        docs = [bm25_document(p) for p in payloads]
         self._ids, self._payloads, self._bm25 = ids, payloads, BM25Index(docs)
 
     def corpus_size(self) -> int:

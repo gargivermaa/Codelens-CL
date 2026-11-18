@@ -1,0 +1,257 @@
+{
+  "benchmark": "review",
+  "measured": true,
+  "mode": "rules",
+  "environment": {
+    "timestamp": "2026-11-18T09:45:35.944946+00:00",
+    "python": "3.13.18",
+    "embedding_model": "gemini-embedding-001",
+    "dimensions": 1536,
+    "query_task_type": "CODE_RETRIEVAL_QUERY",
+    "review_model": "gemini-2.5-flash"
+  },
+  "cases": [
+    {
+      "id": "r01",
+      "expected": [
+        {
+          "file": "shopapp/auth.py",
+          "line": 21,
+          "category": "security"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/auth.py",
+          "start_line": 21,
+          "end_line": 21,
+          "category": "security",
+          "status": "confirmed",
+          "title": "Non-cryptographic randomness for a secret",
+          "source": "rule:SEC011"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "latency_ms": 6.3,
+      "risk": "medium"
+    },
+    {
+      "id": "r02",
+      "expected": [
+        {
+          "file": "shopapp/reports.py",
+          "line": 24,
+          "category": "security"
+        }
+      ],
+      "predicted": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "latency_ms": 4.1,
+      "risk": "low"
+    },
+    {
+      "id": "r03",
+      "expected": [
+        {
+          "file": "shopapp/orders.py",
+          "line": 22,
+          "category": "security"
+        }
+      ],
+      "predicted": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "latency_ms": 3.8,
+      "risk": "low"
+    },
+    {
+      "id": "r04",
+      "expected": [
+        {
+          "file": "shopapp/billing.py",
+          "line": 11,
+          "category": "bug"
+        }
+      ],
+      "predicted": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "latency_ms": 3.4,
+      "risk": "low"
+    },
+    {
+      "id": "r05",
+      "expected": [
+        {
+          "file": "shopapp/uploads.py",
+          "line": 23,
+          "category": "security"
+        }
+      ],
+      "predicted": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "latency_ms": 3.6,
+      "risk": "low"
+    },
+    {
+      "id": "r06",
+      "expected": [
+        {
+          "file": "shopapp/notifications.py",
+          "line": 29,
+          "category": "security"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/notifications.py",
+          "start_line": 29,
+          "end_line": 29,
+          "category": "security",
+          "status": "confirmed",
+          "title": "Subprocess call with shell=True",
+          "source": "rule:SEC002"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "latency_ms": 3.6,
+      "risk": "high"
+    },
+    {
+      "id": "r07",
+      "expected": [
+        {
+          "file": "shopapp/notifications.py",
+          "line": 7,
+          "category": "security"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/notifications.py",
+          "start_line": 7,
+          "end_line": 7,
+          "category": "security",
+          "status": "confirmed",
+          "title": "Hardcoded credential",
+          "source": "rule:SEC007"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "latency_ms": 3.4,
+      "risk": "high"
+    },
+    {
+      "id": "r08",
+      "expected": [
+        {
+          "file": "shopapp/billing.py",
+          "line": 18,
+          "category": "bug"
+        }
+      ],
+      "predicted": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "latency_ms": 3.3,
+      "risk": "low"
+    },
+    {
+      "id": "c01",
+      "expected": [],
+      "predicted": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "latency_ms": 3.8,
+      "risk": "low"
+    },
+    {
+      "id": "c02",
+      "expected": [],
+      "predicted": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "latency_ms": 3.4,
+      "risk": "low"
+    },
+    {
+      "id": "c03",
+      "expected": [],
+      "predicted": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "latency_ms": 3.5,
+      "risk": "low"
+    }
+  ],
+  "confirmed_only": {
+    "finding_precision": 1.0,
+    "finding_recall": 0.375,
+    "false_positive_findings": 0,
+    "clean_case_false_positive_rate": 0.0,
+    "predicted": 3,
+    "expected": 8,
+    "true_positives": 3
+  },
+  "including_possible": {
+    "finding_precision": 1.0,
+    "finding_recall": 0.375,
+    "false_positive_findings": 0,
+    "clean_case_false_positive_rate": 0.0,
+    "predicted": 3,
+    "expected": 8,
+    "true_positives": 3
+  },
+  "latency": {
+    "n": 11,
+    "mean_ms": 3.85,
+    "median_ms": 3.58,
+    "p95_ms": 6.29,
+    "max_ms": 6.29
+  }
+}
