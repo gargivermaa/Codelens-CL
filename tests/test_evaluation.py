@@ -101,3 +101,28 @@ def test_ndcg():
     from app.evaluation.metrics import ndcg_at_k
     assert ndcg_at_k(["a", "b"], {"a"}, 5) == 1.0
     assert 0 < ndcg_at_k(["x", "a"], {"a"}, 5) < 1
+
+
+def test_query_vector_cache_persists_and_retriever_reuses_it(monkeypatch, tmp_path):
+    from qdrant_client import QdrantClient
+
+    from app.core.chunker import chunk_source
+    from app.core.embedder import index_repository
+    from app.core.retriever import HybridRetriever
+    from tests.fakes import HashingGemini
+
+    monkeypatch.setattr(bench, "CACHE", tmp_path)
+    qdrant = QdrantClient(":memory:")
+    index_repository(5, chunk_source(b"def calculate_discount(x):\n    return x\n", "b.py"), HashingGemini(), qdrant)
+
+    gemini = HashingGemini()
+    cache = bench.QueryVectorCache()
+    retriever = HybridRetriever(5, qdrant, gemini, query_cache=cache)
+    retriever.search("calculate_discount", mode="dense")
+    retriever.search("calculate_discount", mode="dense")
+    assert len(gemini.calls) == 1                       # second search reused the vector
+    cache.save()
+
+    gemini2 = HashingGemini()
+    HybridRetriever(5, qdrant, gemini2, query_cache=bench.QueryVectorCache()).search("calculate_discount", mode="dense")
+    assert gemini2.calls == []                          # loaded from disk: no API call at all

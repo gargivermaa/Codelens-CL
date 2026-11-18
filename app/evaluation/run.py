@@ -108,14 +108,58 @@ def _in_split(case: dict, split: str) -> bool:
     return split == "all" or case.get("split", "dev") == split
 
 
-def _index_sample_repo():
+CACHE = ROOT / ".cache"
+BENCH_COLLECTION_ID = 900_000_002   # dedicated Qdrant collection for the benchmark corpus
+
+
+class QueryVectorCache(dict):
+    """Query embeddings persisted on disk, keyed by model + task type + text.
+
+    Free-tier embedding quota is 1000 requests/day; benchmark queries are fixed,
+    so each one is embedded once, ever.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.prefix = f"gemini-embedding-001|1536|{settings.EMBEDDING_QUERY_TASK_TYPE}|"
+        self.path = CACHE / "query_vectors.json"
+        if self.path.exists():
+            try:
+                stored = json.loads(self.path.read_text())
+                super().update({k[len(self.prefix):]: v for k, v in stored.items() if k.startswith(self.prefix)})
+            except (OSError, ValueError):
+                pass
+
+    def save(self) -> None:
+        CACHE.mkdir(parents=True, exist_ok=True)
+        stored = {}
+        if self.path.exists():
+            try:
+                stored = json.loads(self.path.read_text())
+            except (OSError, ValueError):
+                stored = {}
+        stored.update({self.prefix + k: v for k, v in self.items()})
+        self.path.write_text(json.dumps(stored))
+
+
+def _index_sample_repo(cache: "QueryVectorCache | None" = None):
+    """Index the sample repository once, in the configured Qdrant if reachable.
+
+    Re-runs are incremental (unchanged chunks keep their vectors), so the
+    benchmark corpus costs embedding quota only the first time.
+    """
     from qdrant_client import QdrantClient
 
-    from app.core.embedder import index_repository
-    qdrant = QdrantClient(":memory:")
+    from app.core.embedder import get_qdrant_client, index_repository
+    try:
+        qdrant = get_qdrant_client()
+        qdrant.get_collections()
+    except Exception:  # no Qdrant server: fall back to memory (re-embeds every run)
+        qdrant = QdrantClient(":memory:")
     started = time.perf_counter()
-    index_repository(BENCH_REPO_ID, chunk_repository(SAMPLE_REPO), qdrant=qdrant)
-    return HybridRetriever(BENCH_REPO_ID, qdrant), round(time.perf_counter() - started, 3)
+    index_repository(BENCH_COLLECTION_ID, chunk_repository(SAMPLE_REPO), qdrant=qdrant)
+    return (HybridRetriever(BENCH_COLLECTION_ID, qdrant, query_cache=cache),
+            round(time.perf_counter() - started, 3))
 
 
 # ---------------------------------------------------------------- retrieval
@@ -140,7 +184,8 @@ def run_retrieval(modes: list[str], k: int, split: str = "all", rrf_k: int = RRF
                 if mode != "bm25":
                     report["modes"][mode] = {"skipped": "GEMINI_API_KEY not set"}
         else:
-            retriever, report["index_seconds"] = _index_sample_repo()
+            cache = QueryVectorCache()
+            retriever, report["index_seconds"] = _index_sample_repo(cache)
 
     bm25 = BM25Index([bm25_document(p) for p in payloads])
     vectors: dict[str, list[float]] = {}
@@ -157,7 +202,7 @@ def run_retrieval(modes: list[str], k: int, split: str = "all", rrf_k: int = RRF
                 ranked = _unique([_label(payloads[i]) for i in order])
             else:
                 if case["id"] not in vectors:
-                    vectors[case["id"]] = retriever.embed(case["query"])   # one embedding per query
+                    vectors[case["id"]] = retriever.embed(case["query"])   # cached on disk
                 result = retriever.search(case["query"], top_k=max(k, 10), mode=mode, rrf_k=rrf_k,
                                           weights=weights, candidate_k=candidate_k,
                                           query_vector=vectors[case["id"]])
@@ -176,6 +221,8 @@ def run_retrieval(modes: list[str], k: int, split: str = "all", rrf_k: int = RRF
             f"recall@{k}": mean(f"r@{k}"), f"ndcg@{k}": mean(f"ndcg@{k}"), "mrr": mean("rr"),
             "latency": summarize_latencies(latencies), "per_query": per_query,
         }
+    if retriever is not None and retriever.query_cache is not None:
+        retriever.query_cache.save()
     for mode, m in report["modes"].items():
         if "skipped" not in m:
             _append_summary({"run_id": run_id, "benchmark": "retrieval", "config": mode, "split": split,
@@ -291,9 +338,12 @@ def run_review(config: str, split: str = "holdout", repeats: int = 1) -> dict:
         from app.review.llm import GeminiReviewLLM
         llm = GeminiReviewLLM()
         if config == "llm_context":
-            retriever, report["index_seconds"] = _index_sample_repo()
+            cache = QueryVectorCache()
+            retriever, report["index_seconds"] = _index_sample_repo(cache)
 
     runs = _run_config(config, cases, repeats, retriever, llm)
+    if retriever is not None:
+        retriever.query_cache.save()
     per_run = [score_review_cases(_confirmed_only(r)) for r in runs]
     report["cases"] = runs[0] if repeats == 1 else [c for run in runs for c in run]
     report["confirmed_only"] = per_run[0] if repeats == 1 else _mean_metrics(per_run)
@@ -313,10 +363,14 @@ def run_review(config: str, split: str = "holdout", repeats: int = 1) -> dict:
     report["tokens"] = {"total": sum(tokens), "per_case_mean": round(sum(tokens) / len(all_cases), 1) if all_cases else 0,
                         "reported_calls": len(tokens)}
     report["api_failures"] = sum(r["api_failures"] for r in all_cases)
+    # Retrieval that fell back to BM25 (e.g. embedding quota) is NOT the llm_context
+    # configuration; the run is flagged so it can never pass as a valid result.
+    report["retrieval_degraded_cases"] = sum(1 for r in runs[0] if any("degraded" in e for e in r["errors"]))
+    report["valid"] = report["api_failures"] == 0 and report["retrieval_degraded_cases"] == 0
     report["cases_with_errors"] = sum(1 for r in runs[0] if r["api_failures"])
 
     m = report["confirmed_only"]
-    _append_summary({"run_id": run_id, "benchmark": "review", "config": config, "split": split,
+    _append_summary({"valid": report["valid"], "run_id": run_id, "benchmark": "review", "config": config, "split": split,
                      "n": len(cases), "repeats": repeats, "precision": m["precision"], "recall": m["recall"],
                      "f1": m["f1"], "clean_fp_rate": m["clean_case_false_positive_rate"],
                      "category_accuracy": m["category_accuracy"], "line_exact": m["line_exact"],
@@ -390,6 +444,10 @@ def _print_review(report: dict) -> None:
     print(f"{report['config']:12} P {fmt(m['precision'])}  R {fmt(m['recall'])}  F1 {fmt(m['f1'])}  "
           f"cleanFP {fmt(m['clean_case_false_positive_rate'])}  cat {fmt(m['category_accuracy'])}  "
           f"line {fmt(m['line_exact'])}  dup {fmt(m['duplicate_rate'])}  api_fail {report['api_failures']}")
+    if not report.get("valid", True):
+        print(f"  !! INVALID RUN: {report['api_failures']} LLM failure(s), "
+              f"{report['retrieval_degraded_cases']} case(s) with degraded retrieval (quota?). "
+              "Do not report these numbers; re-run when the quota resets.")
 
 
 def main() -> None:

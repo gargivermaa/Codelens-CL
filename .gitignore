@@ -44,3 +44,6 @@ frontend/dist/
 # GitHub App private key and other local secrets
 secrets/*
 !secrets/.gitkeep
+
+# Benchmark embedding cache (local, regenerable)
+benchmarks/.cache/

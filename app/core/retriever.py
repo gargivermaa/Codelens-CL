@@ -76,11 +76,14 @@ def _unit_key(payload: dict) -> tuple:
 class HybridRetriever:
     """Retriever bound to one repository's collection."""
 
-    def __init__(self, repo_github_id: int, qdrant: QdrantClient | None = None, gemini_client=None):
+    def __init__(self, repo_github_id: int, qdrant: QdrantClient | None = None, gemini_client=None,
+                 query_cache: dict | None = None):
         self.repo_github_id = repo_github_id
         self.collection = collection_name(repo_github_id)
         self.qdrant = qdrant or get_qdrant_client()
         self.gemini_client = gemini_client
+        # Optional {query text: vector} cache (benchmarks reuse embeddings across runs).
+        self.query_cache = query_cache
         self._ids: list[str] | None = None
         self._payloads: list[dict] = []
         self._bm25: BM25Index | None = None
@@ -110,7 +113,7 @@ class HybridRetriever:
 
     # ---- individual retrievers --------------------------------------------
     def _dense(self, query: str, limit: int, vector: list[float] | None = None) -> list[tuple[str, float, dict]]:
-        vector = vector or embed_query(query, client=self.gemini_client)
+        vector = vector or self.embed(query)
         response = self.qdrant.query_points(self.collection, query=vector, limit=limit, with_payload=True)
         return [(str(p.id), float(p.score), p.payload or {}) for p in response.points]
 
@@ -123,7 +126,12 @@ class HybridRetriever:
     # ---- public API -------------------------------------------------------
     def embed(self, query: str) -> list[float]:
         """Query vector (lets callers reuse one embedding across many searches)."""
-        return embed_query(query, client=self.gemini_client)
+        if self.query_cache is not None and query in self.query_cache:
+            return self.query_cache[query]
+        vector = embed_query(query, client=self.gemini_client)
+        if self.query_cache is not None:
+            self.query_cache[query] = vector
+        return vector
 
     def search(self, query: str, top_k: int = 5, mode: str = "hybrid",
                exclude: Callable[[dict], bool] | None = None,
