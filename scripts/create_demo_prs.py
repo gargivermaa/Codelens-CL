@@ -55,9 +55,17 @@ def main() -> None:
     repo = args.demo_repo.resolve()
     if not (repo / ".git").is_dir():
         raise SystemExit(f"{repo} is not a git clone. Clone your codelens-demo repository first.")
-    if git(repo, "status", "--porcelain"):
+    if git(repo, "status", "--porcelain", "--untracked-files=no"):
         raise SystemExit("The demo repository has uncommitted changes; commit or discard them first.")
 
+    if not git(repo, "rev-parse", "--verify", "-q", "HEAD", check=False):
+        # Freshly created empty repository: make the first commit on `main`.
+        git(repo, "checkout", "-B", "main")
+        if not (repo / "README.md").exists():
+            (repo / "README.md").write_text("# codelens-demo\n\nDemo repository for CodeLens CI.\n", encoding="utf-8")
+        git(repo, "add", "README.md")
+        git(repo, "commit", "-m", "Initial commit")
+        print("[main] created the first commit (repository was empty)")
     main_branch = git(repo, "rev-parse", "--abbrev-ref", "HEAD")
     if not (repo / "shopapp").is_dir():
         shutil.copytree(SAMPLE_REPO / "shopapp", repo / "shopapp")
