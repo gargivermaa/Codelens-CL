@@ -2,99 +2,68 @@
 
 Branch: `claude/full-project-implementation` (based on `d6a1998`). Last updated: 2026-11-18.
 
-**Legend:**
-* ✅ implemented and verified by running it
-* 🧪 implemented and verified against mocks or fakes only; needs a real external service
-* ⏳ not done
+Status keys:
+* ✅ **Verified**: implemented and run for real.
+* 🧪 **Not integration-tested**: implemented and tested against real code paths with
+  mock HTTP or fakes, but not yet run against the real external service.
+* ⏳ **Pending owner action**: needs something only the owner can do (GitHub App
+  install, Docker on the laptop).
 
-## 1. Milestones
+## 1. Status report
 
-| # | Milestone | Status | Evidence |
-|---|---|---|---|
-| 1 | FastAPI, config, webhook + HMAC | ✅ | `test_webhook.py`, live run (section 4) |
-| 1 | PostgreSQL models + Alembic | ✅ | migrations up/down/up on PG 16, `alembic check` clean, `test_db.py` |
-| 1 | Redis + Celery | ✅ | live worker consumed a webhook job (section 4); retry policy in `test_tasks_and_api.py` |
-| 2 | Tree-sitter chunking, lossless splitting, exclusions | ✅ | `test_chunker.py` (33) |
-| 3 | Gemini embeddings (batching, normalization, retry, quota errors, query task type) | ✅ | real run on the owner's laptop: 23 chunks embedded and stored in a local Qdrant server (section 5) |
-| 3 | Qdrant indexing: incremental, failure-safe, per-repo | ✅ | `test_embedder.py` (34) on qdrant-client local mode |
-| 4 | Hybrid retrieval (BM25 + dense + RRF) | ✅ | `test_retriever.py` (12); all three modes measured with real Gemini embeddings |
-| 5 | LangGraph review pipeline (11 nodes + conditional security) | ✅ | real benchmark run with `gemini-3.5-flash-lite`, 0 LLM errors (section 5); `test_review.py` (17) |
-| 5 | Security rules | ✅ | measured on the benchmark (section 5) |
-| 6 | Risk scoring | ✅ | documented formula, `test_review.py` |
-| 6 | Persistence of reviews, findings, retrieval logs | ✅ | `test_review_service.py` against real PostgreSQL |
-| 7 | GitHub App auth, PR fetching, review posting | 🧪 | `test_github.py` (14) with the real httpx client and mock transport |
-| 8 | End-to-end orchestration | ✅ with fakes | `test_review_service.py`: real PG + real graph + in-memory Qdrant; GitHub and Gemini faked |
-| 9 | Evaluation framework + datasets | ✅ | `test_evaluation.py`; BM25 and rules-only baselines measured |
-| 9 | Observability (JSON logs, timings, retrieval logs, LangSmith switch) | ✅ / 🧪 LangSmith | |
-| 10 | Dockerfile + Compose | 🧪 | `docker compose config` valid; images not built here (no Docker daemon) |
-| 10 | README, ARCHITECTURE, this file | ✅ | |
-| — | Real GitHub PR reviewed end-to-end | ⏳ | needs a GitHub App or token and a test repository (section 6) |
-| — | Dense, hybrid and LLM benchmark numbers | ✅ | measured on the owner's laptop (section 5) |
+| Area | Status | Evidence |
+|---|---|---|
+| FastAPI, config, webhook HMAC, ping/installation events | ✅ | `test_webhook.py`, `test_dashboard_api.py`; live uvicorn + Celery run |
+| PostgreSQL schema (4 migrations, additive) | ✅ | up/down/up on PG 16; `alembic check` clean; owner's laptop migrated |
+| Redis + Celery (acks_late, retries) | ✅ | live worker consumed a signed webhook; retry policy tests |
+| Tree-sitter chunking, lossless splitting, exclusions | ✅ | `test_chunker.py` (33) |
+| Gemini embeddings + Qdrant (incremental, failure-safe) | ✅ | real run on owner's laptop, 23 chunks in a Qdrant server |
+| Hybrid retrieval BM25 + dense + RRF | ✅ | all three modes measured with real Gemini embeddings |
+| LangGraph review pipeline (11 nodes, conditional security) | ✅ | real benchmark with `gemini-3.5-flash-lite`, 0 LLM errors |
+| Validation, dedup, severity, risk scoring | ✅ | unit + service tests; real benchmark |
+| Persistence: repos, PRs, reviews, findings, diffs, retrieval logs | ✅ | service and dashboard tests on real PostgreSQL |
+| Dashboard API (`/api/*`) | ✅ | `test_dashboard_api.py` on data produced by the real review service |
+| React dashboard (6 screens) | ✅ | built and screenshotted with real persisted reviews (rules-only data in this environment); no console errors; no horizontal overflow at 390 px |
+| GitHub App auth, PR fetch, review + inline comment posting | 🧪 | real httpx/PyJWT code against a mock GitHub transport. **Not yet run against github.com.** |
+| Automatic review of a real PR (webhook → GitHub comments) | ⏳ | needs the GitHub App installed on `codelens-demo` (README → Demo) |
+| `docker compose up --build` | ⏳ | compose config validated, frontend and Python stages build separately; images not built here (no Docker daemon) |
+| LangSmith tracing | 🧪 | env switch only; not tried with a real account |
 
-## 2. Test results (actual)
+Nothing in the product is mocked or hardcoded. Mocks exist only in `tests/`.
+`scripts/seed_local_reviews.py` runs the real review service with pull request data
+read from local benchmark files instead of the GitHub API, and is clearly labelled
+`local/shopapp-benchmark` in the dashboard.
 
-`pytest -q`: **151 passed** (150 when first verified on the owner's laptop, before the model-error test was added). This was run on Python 3.13 and again on Python 3.11 (a clean
-install of `requirements.txt`). PostgreSQL 16 and Redis 7 ran locally. No API keys and
-no network calls were used.
+## 2. Test results
 
-| File | Passed |
+`pytest -q`: **157 passed** (Python 3.13 in this environment; the owner's laptop
+passed 150 on Python 3.11 before the dashboard work).
+
+| File | Passed | | File | Passed |
+|---|---|---|---|---|
+| test_chunker.py | 33 | | test_github.py | 14 |
+| test_embedder.py | 34 | | test_retriever.py | 12 |
+| test_review.py | 18 | | test_tasks_and_api.py | 10 |
+| test_review_service.py | 7 | | test_evaluation.py | 7 |
+| test_webhook.py | 7 | | test_dashboard_api.py | 5 |
+| test_db.py | 5 | | test_diff_parser.py | 5 |
+
+## 3. Problems found and fixed (audit log)
+
+| Problem | Fix |
 |---|---|
-| test_chunker.py | 33 |
-| test_embedder.py | 34 |
-| test_retriever.py | 12 |
-| test_review.py | 17 |
-| test_github.py | 14 |
-| test_tasks_and_api.py | 10 |
-| test_review_service.py | 7 |
-| test_evaluation.py | 7 |
-| test_webhook.py | 7 |
-| test_db.py | 5 |
-| test_diff_parser.py | 5 |
+| `requirements.txt` not installable; pydantic pin conflicted with google-genai | fixed pins |
+| Oversized chunks silently truncated before embedding | lossless syntax-aware splitting |
+| `docker-compose.yml` did not publish Postgres/Redis ports to the host | ports added |
+| A retired review model (404) produced silent rules-only reviews | `LLMConfigurationError` stops the review |
+| `gemini-2.5-flash` unavailable to new keys | default `gemini-3.5-flash-lite` (verified on owner's key) |
+| Missing `GEMINI_API_KEY` failed the whole review during indexing | degrades to "no repository context" (noted in the review) |
+| Dashboard route `/reviews/:id` collided with the JSON API `/reviews/{id}` | dashboard uses `/review/:id` |
+| Docker created a *directory* when `github_app.pem` was missing | key now lives in `./secrets/` (mounted read-only) |
+| Security pass skipped when a PR *removed* an authorization check (IDOR r03) | removed lines count toward security routing |
+| Duplicate `readme.md`/`README.md` broke Windows checkouts | merged |
 
-Baseline on the original commit `d6a1998`: 41 passed, after the `requirements.txt` fix.
-
-## 3. Changes on this branch
-
-| Commit | Summary |
-|---|---|
-| `fix(deps)` | `requirements.txt` was not installable: bare `--- Added Day N ---` lines, and pydantic 2.10.4 conflicted with google-genai 3.5.0, which needs ≥ 2.12.5. Added langgraph, PyJWT and cryptography. |
-| `feat(core)` Day 9 | Lossless syntax-aware splitting (fixes the "8 inputs truncated at 1800 bytes" loss); backup, vendored and generated exclusions; incremental indexing; retry and quota handling; `embed_query` with `CODE_RETRIEVAL_QUERY`; removed the duplicate `OPENAI_API_KEY`, stale OpenAI comments and the unused `openai` dependency. |
-| `feat(retrieval)` Day 10 | BM25 + dense + RRF hybrid retriever. |
-| `feat:` schema/diff/GitHub | Migration `b7d2e4f19a30`, diff parser, GitHub App client. |
-| `feat(review)` | LangGraph pipeline, validation, dedup, severity, risk, rules. |
-| `feat:` wiring | Review service, Celery task, read API, CLI, JSON logging. |
-| `feat(eval)` | Benchmarks, metrics, measured baselines. |
-| `docs/docker` | Dockerfile, Compose, `.env.example`, README, ARCHITECTURE, this file. Removed `readme.md`: it duplicated `README.md`, and two names differing only in case break checkouts on Windows. Its content is merged into `README.md`. |
-
-**Behaviour changes to existing code, and why:**
-* Two Day 7 and Day 8 tests asserted the old *truncation* behaviour that this assignment
-  asks to eliminate. They now assert lossless splitting instead.
-* `test_gemini_failure_leaves_existing_index_intact` now re-indexes *changed* code.
-  Incremental indexing correctly makes no API call for unchanged code, so the old test
-  could no longer trigger the failure.
-* Chunks larger than 1800 bytes get new ids (`#partN`). They were previously stored
-  truncated, so re-indexing replaces them. Ids of unsplit chunks are unchanged; the
-  golden-value test still passes.
-* `reviews.github_comment_id` and `repositories.installation_id` were widened to
-  BigInteger, because GitHub ids exceed 2³¹.
-
-## 4. Commands executed here (selection)
-
-```
-alembic upgrade head; alembic downgrade -1; alembic upgrade head; alembic check  -> no drift
-pytest -q                                                                          -> 150 passed (3.13 and 3.11)
-python -m app.evaluation.run retrieval        -> bm25 measured; dense/hybrid skipped (no key)
-python -m app.evaluation.run review --mode rules
-docker compose config -q                       -> valid
-```
-
-Live stack: uvicorn and a Celery worker (`-P solo`), with Redis and PostgreSQL.
-`scripts/send_test_webhook.py` → `200 {"status":"queued"}`. The worker received the
-task and called `GET /repos/octocat/hello-world/pulls/101`, which this sandbox's
-network refused with `403`. It was correctly classified as permanent, so it was not
-retried. The plumbing up to the GitHub call is verified; the GitHub part is not.
-
-## 5. Measured benchmark results
+## 4. Measured benchmark results
 
 All numbers are real runs; the JSON reports are in `benchmarks/results/`. The
 corpus is the 23-chunk `benchmarks/sample_repo`, so it is small and absolute values
@@ -144,39 +113,38 @@ Model note: `gemini-2.5-flash` returned 404 ("no longer available to new users")
 `gemini-3.5-flash-lite` worked and is now the default. With no billing account
 linked, a model outside the free tier can only fail with 429; it cannot incur charges.
 
-## 6. Blockers and what the owner must run
+**IDOR (r03) root cause, found after the run.** The security-focused LLM pass only
+runs when a change looks security-relevant. That check looked at the file path and
+the **added** lines. In r03 the added line (`if order is None:`) is harmless; the
+authorization check is on the **removed** line. So the security pass never ran and
+only the bug pass saw the issue, which explains the `bug` label. Since commit
+"fix(review): route removed security checks to the security pass", removed lines are
+also considered (test: `test_removing_an_authorization_check_routes_to_the_security_pass`).
+**The LLM benchmark has not been re-run since this fix**, so the numbers above are
+from before it. Re-run `python -m app.evaluation.run review --mode llm` and update
+this table; the label for r03 must not be changed.
 
-These could not be verified in this environment. None of them are faked.
+## 5. What the owner must do to finish
 
-1. ~~Real Gemini calls~~ — done on the owner's laptop (section 5).
-2. **Real GitHub.** Create a GitHub App (README → Connecting GitHub), install it on a
-   *public* test repository, and point a smee.io tunnel at `/webhook`. Opening a PR is
-   then the end-to-end test. A quicker check: `python -m app.cli review OWNER/REPO N
-   --no-post` with `GITHUB_TOKEN`.
-3. **Docker images.** Run `docker compose up --build` on your machine.
-4. **Push.** This session's GitHub access was read-only, so the branch exists only in
-   the bundle handed over with this work. See the handoff message for how to apply it.
+1. GitHub App + webhook + `codelens-demo`: follow README → *GitHub App setup* and
+   *Demo*. This is the first real test of posting reviews and inline comments.
+2. `docker compose up --build` on the laptop (README → *Run with Docker*).
+3. Re-run `python -m app.evaluation.run review --mode llm` after the routing fix and
+   update section 4.
+4. Push the branch (README → *Pushing this branch*). This session had read-only
+   GitHub access.
 
-## 7. Known limitations
+## 6. Known limitations
 
-* Review and chunking support Python only. Other files are skipped with a reason shown
-  in the summary. Adding a language means adding its Tree-sitter grammar and node types
-  in `chunker.py` and `REVIEWABLE_EXTENSIONS`.
-* Indexing re-downloads the base commit's tarball when the base SHA changes. Embedding
-  is incremental, but the download and chunking are not.
-* The BM25 index is rebuilt in memory per review from Qdrant payloads. That is fine for
-  repositories up to tens of thousands of chunks.
-* Free-tier rate limits make very large PRs slow: 3 LLM calls per PR plus one embedding
-  call per changed unit (at most 12).
-* A model's confidence is self-reported. Validation grounds the evidence but cannot
-  prove a finding is correct, which is why "possible" findings are never posted inline.
-* Benchmarks are small and hand-labelled. They show the method, not production-scale
-  accuracy.
-
-## 8. Next steps
-
-1. ~~Real Gemini verification~~ — done (section 5).
-2. Run a real PR on a public test repository via the GitHub App (section 6.2).
-3. `docker compose up --build` on your machine.
-4. Optional: a JavaScript/TypeScript grammar; a GitHub check run showing the risk label;
-   more benchmark cases taken from real PRs.
+* Review and chunking support Python only; other files are listed as skipped.
+* Indexing downloads the base commit's tarball whenever the base SHA changes
+  (embedding is incremental; download and chunking are not).
+* BM25 is rebuilt in memory per review from Qdrant payloads (fine up to tens of
+  thousands of chunks).
+* Free-tier rate limits: about 3 LLM calls per PR plus one embedding call per changed
+  unit (max 12). Overload (503) and quota (429) errors are retried, then reported.
+* LLM confidence is self-reported; validation grounds the evidence but cannot prove a
+  finding correct, which is why "possible" findings are never posted inline.
+* Benchmarks are small and hand-labelled; they show the method, not production accuracy.
+* The dashboard has no login. Run it on localhost only; do not expose port 8000 publicly
+  without adding authentication.

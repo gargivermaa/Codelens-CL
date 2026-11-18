@@ -1,5 +1,8 @@
-# Full local stack: docker compose up --build
+# Full local stack:   docker compose up --build        -> dashboard at http://localhost:8000
+# With the webhook tunnel (GitHub -> your laptop):  docker compose --profile tunnel up --build
+#
 # Secrets (GITHUB_WEBHOOK_SECRET, GEMINI_API_KEY, GITHUB_APP_ID, ...) come from .env.
+# The GitHub App private key goes in ./secrets/github_app.pem (git- and docker-ignored).
 # Service URLs below override the localhost values in .env.
 x-app: &app
   build: .
@@ -12,7 +15,8 @@ x-app: &app
     GITHUB_PRIVATE_KEY_PATH: /run/secrets/github_app.pem
     LOG_FORMAT: json
   volumes:
-    - ./github_app.pem:/run/secrets/github_app.pem:ro
+    - ./secrets:/run/secrets:ro
+    - ./benchmarks/results:/app/benchmarks/results
   depends_on:
     postgres:
       condition: service_healthy
@@ -76,6 +80,17 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+
+  # Forwards GitHub webhooks from a free smee.io channel to the API (no public IP needed).
+  # Set SMEE_URL in .env to your channel from https://smee.io/new
+  tunnel:
+    image: node:22-alpine
+    profiles: ["tunnel"]
+    env_file: .env
+    command: ["sh", "-c", "test -n \"$$SMEE_URL\" || { echo 'Set SMEE_URL in .env (https://smee.io/new)'; exit 1; }; exec npx --yes smee-client@2.0.4 --url \"$$SMEE_URL\" --target http://api:8000/webhook"]
+    depends_on:
+      api:
+        condition: service_healthy
 
 volumes:
   pg_data:

@@ -3,12 +3,12 @@
   "measured": true,
   "mode": "rules",
   "environment": {
-    "timestamp": "2026-11-18T09:45:35.944946+00:00",
+    "timestamp": "2026-11-18T11:07:15.694109+00:00",
     "python": "3.13.18",
     "embedding_model": "gemini-embedding-001",
     "dimensions": 1536,
     "query_task_type": "CODE_RETRIEVAL_QUERY",
-    "review_model": "gemini-2.5-flash"
+    "review_model": "gemini-3.5-flash-lite"
   },
   "cases": [
     {
@@ -37,7 +37,7 @@
         "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
         "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
       ],
-      "latency_ms": 6.3,
+      "latency_ms": 6.1,
       "risk": "medium"
     },
     {
@@ -55,7 +55,7 @@
         "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
         "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
       ],
-      "latency_ms": 4.1,
+      "latency_ms": 3.9,
       "risk": "low"
     },
     {
@@ -71,6 +71,7 @@
       "errors": [
         "Repository context unavailable: repository is not indexed.",
         "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
         "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
       ],
       "latency_ms": 3.8,
@@ -92,7 +93,7 @@
         "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
         "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
       ],
-      "latency_ms": 3.4,
+      "latency_ms": 3.5,
       "risk": "low"
     },
     {
@@ -111,7 +112,7 @@
         "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
         "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
       ],
-      "latency_ms": 3.6,
+      "latency_ms": 3.4,
       "risk": "low"
     },
     {
@@ -169,7 +170,7 @@
         "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
         "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
       ],
-      "latency_ms": 3.4,
+      "latency_ms": 3.7,
       "risk": "high"
     },
     {
@@ -188,7 +189,7 @@
         "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
         "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
       ],
-      "latency_ms": 3.3,
+      "latency_ms": 3.5,
       "risk": "low"
     },
     {
@@ -201,7 +202,7 @@
         "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
         "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
       ],
-      "latency_ms": 3.8,
+      "latency_ms": 3.6,
       "risk": "low"
     },
     {
@@ -213,7 +214,7 @@
         "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
         "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
       ],
-      "latency_ms": 3.4,
+      "latency_ms": 3.6,
       "risk": "low"
     },
     {
@@ -225,7 +226,7 @@
         "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
         "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
       ],
-      "latency_ms": 3.5,
+      "latency_ms": 4.3,
       "risk": "low"
     }
   ],
@@ -249,9 +250,9 @@
   },
   "latency": {
     "n": 11,
-    "mean_ms": 3.85,
-    "median_ms": 3.58,
-    "p95_ms": 6.29,
-    "max_ms": 6.29
+    "mean_ms": 3.92,
+    "median_ms": 3.63,
+    "p95_ms": 6.11,
+    "max_ms": 6.11
   }
 }

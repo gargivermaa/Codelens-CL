@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # --- GitHub App (preferred) ---
     GITHUB_APP_ID: str = ""
-    GITHUB_PRIVATE_KEY_PATH: str = "./github_app.pem"
+    GITHUB_PRIVATE_KEY_PATH: str = "./secrets/github_app.pem"
     # --- GitHub token (optional fallback for local demos: a free fine-grained PAT) ---
     GITHUB_TOKEN: str = ""
     GITHUB_API_URL: str = "https://api.github.com"

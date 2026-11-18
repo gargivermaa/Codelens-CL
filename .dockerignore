@@ -1,9 +1,11 @@
 .git
 .env
+secrets
 *.pem
 *.key
 venv
 .venv
 __pycache__
 .pytest_cache
-benchmarks/results
+frontend/node_modules
+frontend/dist

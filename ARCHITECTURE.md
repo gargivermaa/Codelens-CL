@@ -57,8 +57,13 @@ a GitHub outage only re-posts. The free-tier LLM analysis is never repeated.
 * `retrieval_logs`: per query: strategy, chunk ids, dense/BM25/fused scores, dense
   latency, BM25 latency, degradation reason, review id.
 
+* `review_files`: one row per changed file of a reviewed commit (status, +/-, patch,
+  skip reason). Powers the dashboard's diff viewer.
+* `repositories.default_branch` and `private` come from the PR payload or the
+  `installation` webhook.
+
 Migrations: `6c55a024860c` (initial), `948c7ae88c69` (unique PR, BigInteger id),
-`b7d2e4f19a30` (review pipeline; additive only). `alembic check` reports no drift.
+`b7d2e4f19a30` (review pipeline), `c41e8a7d5b62` (dashboard: stored diffs). All are additive. `alembic check` reports no drift.
 
 ## 4. Retrieval
 
@@ -114,7 +119,9 @@ understand_changes → analyze_changed_code → retrieve_context → detect_bugs
 ```
 
 * **understand_changes:** stats, skipped files with reasons, and security-sensitive files
-  (path or content matches auth, token, payment, sql, upload, shell, ...).
+  (the path, an added line or a **removed** line matches auth, token, owner, role, payment,
+  sql, upload, shell, ...). Removed lines count because deleting an authorization check
+  is a security change even when the added lines look harmless.
 * **analyze_changed_code:** maps added lines to their innermost function or method from
   the head version. Module-level additions become `<module>` units.
 * **retrieve_context:** hybrid retrieval for up to 12 units. Context chunks get labels
@@ -192,3 +199,36 @@ Saturating (0..1), monotonic in every input, and fully stored in `reviews.risk_b
 * `retrieval_logs`: every query with scores and latencies (evaluation data).
 * LangSmith: set `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` (free developer tier).
   LangGraph emits traces automatically.
+
+## 10. Dashboard
+
+* React 18 + Vite + Tailwind in `frontend/`. `npm run build` writes `frontend/dist`,
+  which FastAPI serves at `/`, with a client-side routing fallback. The Docker image
+  builds it in a Node stage, so users do not need Node.
+* Data comes only from `/api/*` (`app/api/dashboard.py`). These are read-only queries
+  over PostgreSQL and `benchmarks/results/*.json`. The dashboard has no local state
+  and no sample data.
+* Screens: Overview, Repositories (+ detail), Pull requests (filters), PR review
+  history, Review detail (findings / code diff with findings on their lines / risk
+  and pipeline), Analytics (activity, categories, per-repo stats, benchmark results).
+* Charts: fixed status palette (low → critical) always paired with text labels;
+  categorical colors validated for color-vision deficiency on the dark surface;
+  single-axis charts only.
+* Dashboard paths (`/review/:id`) are kept distinct from the JSON API paths
+  (`/reviews/{id}`), so a page reload never returns raw JSON.
+
+## 11. Installation events
+
+`installation` (created) and `installation_repositories` (added) webhooks enqueue
+`register_repositories`, which upserts the repositories. A repository therefore
+shows on the dashboard as soon as the App is installed. Indexing still happens on
+its first pull request, at that PR's base commit.
+
+## 12. Deployment layout (Docker Compose)
+
+`postgres`, `redis`, `qdrant`, then `migrate` (runs `alembic upgrade head` and
+exits), then `api` (FastAPI + dashboard, healthchecked) and `worker` (Celery).
+An optional `tunnel` profile runs `smee-client` to forward GitHub webhooks from a
+smee.io channel to `api:8000/webhook`. The private key is mounted read-only from
+`./secrets`, and `benchmarks/results` is mounted so the Analytics page shows reports
+generated on the host.

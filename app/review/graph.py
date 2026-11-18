@@ -36,7 +36,7 @@ from app.review.schemas import SEVERITY_RANK, LLMFindingList, ReviewFinding
 logger = logging.getLogger("codelens.review")
 
 SENSITIVE = re.compile(
-    r"(?i)auth|login|logout|passw|token|secret|session|cookie|crypt|cipher|hash|payment|billing|"
+    r"(?i)auth|login|logout|passw|token|secret|session|cookie|crypt|cipher|hash|payment|billing|owner|user_id|"
     r"checkout|invoice|permission|role|admin|acl|oauth|jwt|csrf|sql|query|upload|deserial|exec|shell|"
     r"subprocess|sanitiz|escape|webhook|signature|credential|key"
 )
@@ -163,8 +163,11 @@ class ReviewPipeline:
         contents = state.get("file_contents", {})
         sensitive = []
         for f in reviewable:
-            added = "\n".join(f.added_lines.values())
-            if SENSITIVE.search(f.path) or SENSITIVE.search(added[:20_000]):
+            # Removed lines count too: deleting an authorization or validation check
+            # (e.g. "user_id != user['id'] and role != 'admin'") is a security change
+            # even when the added lines look harmless.
+            changed_text = "\n".join([*f.added_lines.values(), *f.removed_lines.values()])
+            if SENSITIVE.search(f.path) or SENSITIVE.search(changed_text[:20_000]):
                 sensitive.append(f.path)
         stats = {
             "files_total": len(files),

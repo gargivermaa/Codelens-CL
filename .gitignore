@@ -40,3 +40,7 @@ dist/
 # Frontend build output and dependencies (Docker builds the dashboard itself)
 frontend/node_modules/
 frontend/dist/
+
+# GitHub App private key and other local secrets
+secrets/*
+!secrets/.gitkeep

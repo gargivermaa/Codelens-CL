@@ -312,3 +312,22 @@ def test_unknown_model_stops_the_review_instead_of_degrading_silently():
             run(GeminiReviewLLM(client=client, model="gone-model"))
     finally:
         client.close()
+
+
+def test_removing_an_authorization_check_routes_to_the_security_pass():
+    """Benchmark r03 (IDOR): the added line is harmless, the REMOVED line is the auth check."""
+    patch = ('@@ -1,4 +1,4 @@\n def get_order(db, user, order_id):\n'
+             '     order = db.fetch_one("SELECT * FROM orders WHERE id = %s", (order_id,))\n'
+             '-    if order is None or (order["user_id"] != user["id"] and user.get("role") != "admin"):\n'
+             '+    if order is None:\n'
+             '         raise LookupError("order not found")')
+    content = ('def get_order(db, user, order_id):\n'
+               '    order = db.fetch_one("SELECT * FROM orders WHERE id = %s", (order_id,))\n'
+               '    if order is None:\n        raise LookupError("order not found")\n')
+    llm = ScriptedLLM()
+    state = ReviewPipeline(llm, None).run({
+        "repo_full_name": "o/r", "pr_number": 3, "pr_title": "Simplify order lookup", "pr_body": "",
+        "files": parse_pull_request_files([{"filename": "shop/orders.py", "status": "modified", "patch": patch}]),
+        "file_contents": {"shop/orders.py": content}})
+    assert state["sensitive_files"] == ["shop/orders.py"]
+    assert state["security_llm_used"] is True and "security" in llm.prompts
