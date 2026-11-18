@@ -37,6 +37,7 @@ from app.models.pull_request import PullRequest
 from app.models.repository import Repository
 from app.models.retrieval_log import RetrievalLog
 from app.models.review import Review
+from app.models.review_file import ReviewFile
 from app.review.graph import ReviewPipeline, render_inline_body, to_json_safe
 from app.review.schemas import SEVERITY_RANK, ReviewFinding
 
@@ -64,17 +65,11 @@ class ReviewDeps:
 def upsert_repository_and_pr(db: Session, repo_github_id: int, repo_full_name: str, pr_number: int,
                              installation_id: int | None = None, title: str | None = None,
                              author: str | None = None, head_sha: str | None = None,
-                             status: str = "processing") -> tuple[int, int]:
+                             status: str = "processing", default_branch: str | None = None,
+                             private: bool | None = None) -> tuple[int, int]:
     """Atomic INSERT ... ON CONFLICT for the repository and PR rows (Day 5 logic)."""
-    repo_stmt = pg_insert(Repository).values(github_id=repo_github_id, full_name=repo_full_name,
-                                             installation_id=installation_id)
-    repo_stmt = repo_stmt.on_conflict_do_update(
-        index_elements=[Repository.github_id],
-        set_={"full_name": repo_stmt.excluded.full_name,
-              # Preserve the stored installation_id when the incoming value is None.
-              "installation_id": func.coalesce(repo_stmt.excluded.installation_id, Repository.installation_id)},
-    ).returning(Repository.id)
-    repo_id = db.execute(repo_stmt).scalar_one()
+    repo_id = upsert_repository(db, repo_github_id, repo_full_name, installation_id, default_branch, private,
+                                commit=False)
 
     pr_stmt = pg_insert(PullRequest).values(repo_id=repo_id, pr_number=pr_number, title=title, author=author,
                                             head_sha=head_sha, status=status)
@@ -88,6 +83,26 @@ def upsert_repository_and_pr(db: Session, repo_github_id: int, repo_full_name: s
     pr_id = db.execute(pr_stmt).scalar_one()
     db.commit()
     return repo_id, pr_id
+
+
+def upsert_repository(db: Session, repo_github_id: int, repo_full_name: str,
+                      installation_id: int | None = None, default_branch: str | None = None,
+                      private: bool | None = None, commit: bool = True) -> int:
+    """Insert or update a repository row; None values never overwrite stored ones."""
+    stmt = pg_insert(Repository).values(github_id=repo_github_id, full_name=repo_full_name,
+                                        installation_id=installation_id, default_branch=default_branch,
+                                        private=private)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[Repository.github_id],
+        set_={"full_name": stmt.excluded.full_name,
+              "installation_id": func.coalesce(stmt.excluded.installation_id, Repository.installation_id),
+              "default_branch": func.coalesce(stmt.excluded.default_branch, Repository.default_branch),
+              "private": func.coalesce(stmt.excluded.private, Repository.private)},
+    ).returning(Repository.id)
+    repo_id = db.execute(stmt).scalar_one()
+    if commit:
+        db.commit()
+    return repo_id
 
 
 def claim_review(db: Session, pr_id: int, head_sha: str, base_sha: str) -> tuple[Review | None, str]:
@@ -164,6 +179,13 @@ def persist_analysis(db: Session, review: Review, pr_id: int, repo_github_id: in
     review.total_cost_usd = 0.0   # free tier only
     review.status = "analyzed"
 
+    db.query(ReviewFile).filter(ReviewFile.review_id == review.id).delete(synchronize_session=False)
+    for changed in state.get("files", []):
+        db.add(ReviewFile(review_id=review.id, path=changed.path, previous_path=changed.previous_path,
+                          status=changed.status, additions=changed.additions or len(changed.added_lines),
+                          deletions=changed.deletions or len(changed.removed_lines),
+                          patch=changed.patch, skip_reason=changed.skip_reason))
+
     db.query(Finding).filter(Finding.review_id == review.id).delete(synchronize_session=False)
     seen: set[str] = set()
     for f in findings:
@@ -227,9 +249,11 @@ def run_review(db: Session, deps: ReviewDeps, repo_github_id: int, repo_full_nam
 
     pull = deps.github.get_pull(repo_full_name, pr_number)
     head_sha, base_sha = pull["head"]["sha"], pull["base"]["sha"]
+    base_repo = (pull.get("base") or {}).get("repo") or {}
     repo_id, pr_id = upsert_repository_and_pr(
         db, repo_github_id, repo_full_name, pr_number, installation_id, pull.get("title"),
-        (pull.get("user") or {}).get("login"), head_sha)
+        (pull.get("user") or {}).get("login"), head_sha,
+        default_branch=base_repo.get("default_branch"), private=base_repo.get("private"))
     if pull.get("state") != "open":
         db.query(PullRequest).filter_by(id=pr_id).update({"status": "completed"})
         db.commit()

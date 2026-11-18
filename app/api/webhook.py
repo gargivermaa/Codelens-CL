@@ -81,5 +81,27 @@ async def github_webhook(
 
         return {"status": "queued", "repo": repo_name, "pr": pr_number, "action": action}
 
+    if x_github_event == "ping":
+        return {"status": "pong", "zen": payload.get("zen")}
+
+    # GitHub App installed on (or given access to) repositories: register them
+    # so they appear in the dashboard before their first PR.
+    added = None
+    if x_github_event == "installation" and action in ("created", "new_permissions_accepted"):
+        added = payload.get("repositories") or []
+    elif x_github_event == "installation_repositories" and action == "added":
+        added = payload.get("repositories_added") or []
+    if added is not None:
+        installation_id = (payload.get("installation") or {}).get("id")
+        repos = [{"id": r["id"], "full_name": r["full_name"], "private": r.get("private")} for r in added]
+        from app.tasks.review_task import register_repositories
+        try:
+            register_repositories.delay(installation_id=installation_id, repositories=repos)
+        except BrokerUnavailableError:
+            logger.exception("Queue unavailable for installation %s", installation_id)
+            raise HTTPException(status_code=503, detail="Task queue unavailable")
+        logger.info("Queued registration of %d repositories (installation %s)", len(repos), installation_id)
+        return {"status": "queued", "event": x_github_event, "repositories": len(repos)}
+
     logger.info("Ignored event: type=%s action=%s", x_github_event, action)
     return {"status": "ignored", "event": x_github_event, "action": action}

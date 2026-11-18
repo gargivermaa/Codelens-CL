@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, Integer, String, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.database import Base
@@ -17,6 +17,9 @@ class Repository(Base):
 
     # "owner/repo-name" — human-readable, used in logs and GitHub API calls
     full_name: Mapped[str] = mapped_column(String, nullable=False)
+
+    default_branch: Mapped[str | None] = mapped_column(String, nullable=True)
+    private: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # GitHub App installation that grants us access to this repository.
     installation_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)

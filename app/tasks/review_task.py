@@ -52,3 +52,20 @@ def process_pr_review(
         raise self.retry(exc=exc, countdown=countdown)
     finally:
         db.close()
+
+
+@celery_app.task(name="review_task.register_repositories", bind=True, max_retries=5, default_retry_delay=10)
+def register_repositories(self, installation_id: int | None, repositories: list[dict]):
+    """Record repositories the GitHub App was installed on (dashboard: Repositories)."""
+    from app.services.review_service import upsert_repository
+    db = SessionLocal()
+    try:
+        for repo in repositories:
+            upsert_repository(db, int(repo["id"]), repo["full_name"], installation_id,
+                              private=repo.get("private"))
+        logger.info("Registered %d repositories for installation %s", len(repositories), installation_id)
+        return {"registered": len(repositories)}
+    except DBOperationalError as exc:
+        raise self.retry(exc=exc, countdown=10 * 2 ** self.request.retries)
+    finally:
+        db.close()
