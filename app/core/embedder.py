@@ -382,6 +382,40 @@ def ensure_collection(qdrant: QdrantClient, name: str) -> None:
             f"{EMBEDDING_DIMENSIONS}; delete the collection and re-index"
         )
 
+def reuse_vectors_from_other_collections(qdrant: QdrantClient, target_repo_id: int,
+                                         chunks: list[CodeChunk]) -> int:
+    """Copy stored vectors of identical chunks from other collections into the target.
+
+    A vector is a deterministic function of (embed text, model, dimensions, task
+    type). Only chunks whose stored payload is *identical* (same file, name, lines
+    and text) are copied, so the result equals what the API would return - at zero
+    quota. Returns the number of vectors reused.
+    """
+    target = collection_name(target_repo_id)
+    existing = _existing_points(qdrant, target) if qdrant.collection_exists(target) else {}
+    wanted = {_point_id(c): c for c in chunks if existing.get(_point_id(c)) != c.to_dict()}
+    if not wanted:
+        return 0
+    found: dict[str, PointStruct] = {}
+    for collection in qdrant.get_collections().collections:
+        if collection.name == target or not collection.name.startswith("repo_"):
+            continue
+        params = qdrant.get_collection(collection.name).config.params.vectors
+        if getattr(params, "size", None) != EMBEDDING_DIMENSIONS or \
+                getattr(params, "distance", None) != Distance.COSINE:
+            continue
+        points = qdrant.retrieve(collection.name, ids=list(wanted), with_payload=True, with_vectors=True)
+        for point in points:
+            pid = str(point.id)
+            if pid not in found and point.payload == wanted[pid].to_dict() and point.vector:
+                found[pid] = PointStruct(id=pid, vector=point.vector, payload=point.payload)
+        if len(found) == len(wanted):
+            break
+    if found:
+        ensure_collection(qdrant, target)
+        qdrant.upsert(collection_name=target, points=list(found.values()), wait=True)
+        logger.info("Reused %d stored vectors for %s (no API calls)", len(found), target)
+    return len(found)
 
 def index_repository(repo_github_id: int, chunks: list[CodeChunk], gemini_client=None,
                      qdrant: QdrantClient | None = None, progress=None) -> IndexResult:

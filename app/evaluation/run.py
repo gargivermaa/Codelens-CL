@@ -150,14 +150,18 @@ def _index_sample_repo(cache: "QueryVectorCache | None" = None):
     """
     from qdrant_client import QdrantClient
 
-    from app.core.embedder import get_qdrant_client, index_repository
+    from app.core.embedder import get_qdrant_client, index_repository, reuse_vectors_from_other_collections
     try:
         qdrant = get_qdrant_client()
         qdrant.get_collections()
     except Exception:  # no Qdrant server: fall back to memory (re-embeds every run)
         qdrant = QdrantClient(":memory:")
     started = time.perf_counter()
-    index_repository(BENCH_COLLECTION_ID, chunk_repository(SAMPLE_REPO), qdrant=qdrant)
+    chunks = chunk_repository(SAMPLE_REPO)
+    reused = reuse_vectors_from_other_collections(qdrant, BENCH_COLLECTION_ID, chunks)
+    if reused:
+        print(f"  reused {reused} stored vectors of identical chunks (no embedding quota used)")
+    index_repository(BENCH_COLLECTION_ID, chunks, qdrant=qdrant)
     return (HybridRetriever(BENCH_COLLECTION_ID, qdrant, query_cache=cache),
             round(time.perf_counter() - started, 3))
 
@@ -184,8 +188,14 @@ def run_retrieval(modes: list[str], k: int, split: str = "all", rrf_k: int = RRF
                 if mode != "bm25":
                     report["modes"][mode] = {"skipped": "GEMINI_API_KEY not set"}
         else:
+            from app.core.embedder import EmbeddingError
             cache = QueryVectorCache()
-            retriever, report["index_seconds"] = _index_sample_repo(cache)
+            try:
+                retriever, report["index_seconds"] = _index_sample_repo(cache)
+            except EmbeddingError as exc:
+                for mode in modes:
+                    if mode != "bm25":
+                        report["modes"][mode] = {"skipped": f"indexing failed: {str(exc)[:200]}"}
 
     bm25 = BM25Index([bm25_document(p) for p in payloads])
     vectors: dict[str, list[float]] = {}
@@ -203,6 +213,7 @@ def run_retrieval(modes: list[str], k: int, split: str = "all", rrf_k: int = RRF
             else:
                 if case["id"] not in vectors:
                     vectors[case["id"]] = retriever.embed(case["query"])   # cached on disk
+                    retriever.query_cache.save()
                 result = retriever.search(case["query"], top_k=max(k, 10), mode=mode, rrf_k=rrf_k,
                                           weights=weights, candidate_k=candidate_k,
                                           query_vector=vectors[case["id"]])
@@ -338,12 +349,18 @@ def run_review(config: str, split: str = "holdout", repeats: int = 1) -> dict:
         from app.review.llm import GeminiReviewLLM
         llm = GeminiReviewLLM()
         if config == "llm_context":
+            from app.core.embedder import EmbeddingError
             cache = QueryVectorCache()
-            retriever, report["index_seconds"] = _index_sample_repo(cache)
+            try:
+                retriever, report["index_seconds"] = _index_sample_repo(cache)
+            except EmbeddingError as exc:
+                return {**report, "skipped": f"sample repository indexing failed (nothing measured): {str(exc)[:300]}"}
 
-    runs = _run_config(config, cases, repeats, retriever, llm)
-    if retriever is not None:
-        retriever.query_cache.save()
+    try:
+        runs = _run_config(config, cases, repeats, retriever, llm)
+    finally:
+        if retriever is not None:
+            retriever.query_cache.save()
     per_run = [score_review_cases(_confirmed_only(r)) for r in runs]
     report["cases"] = runs[0] if repeats == 1 else [c for run in runs for c in run]
     report["confirmed_only"] = per_run[0] if repeats == 1 else _mean_metrics(per_run)
