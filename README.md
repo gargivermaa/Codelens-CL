@@ -295,10 +295,13 @@ Remove `--no-post` to post the review.
 | ![Diff](docs/screenshots/review-diff.png) | ![Risk](docs/screenshots/review-risk.png) |
 | **Repositories** | **Analytics** |
 | ![Repositories](docs/screenshots/repositories.png) | ![Analytics](docs/screenshots/analytics.png) |
+| **Evaluation (benchmarks)** | |
+| ![Evaluation](docs/screenshots/evaluation.png) | |
 
-The screenshots show real persisted reviews from `scripts/seed_local_reviews.py`, run
-in rules-only mode because the build environment had no Gemini key or GitHub
-access. On your machine the same screens show your GitHub PRs and LLM findings.
+The screenshots show real persisted reviews from `scripts/seed_local_reviews.py` and
+real benchmark runs. They were taken in rules-only mode, because the build
+environment had no Gemini key or GitHub access. On your machine the same screens
+show your GitHub PRs, LLM findings and LLM benchmark runs.
 
 ## API
 
@@ -313,7 +316,7 @@ Interactive docs: http://localhost:8000/docs
 | `GET /api/pulls?repo=&risk=&status=` · `/api/pulls/{id}` | PRs with latest review; review history per PR |
 | `GET /api/reviews/{id}` | Full review: findings, stored diffs, risk breakdown, LLM calls, node timings, notes |
 | `GET /api/analytics?days=30` | History, categories, sources, per-repo stats, latency |
-| `GET /api/benchmarks` | Latest measured benchmark reports |
+| `GET /api/benchmarks` · `/api/benchmarks/runs/{run_id}` | Latest measured report per configuration/split; full run with per-case results |
 | `GET /reviews/{id}`, `/repos/{id}/pulls/{n}/reviews`, `/findings/stats` | Original JSON API (kept) |
 
 CLI: `python -m app.cli index-local PATH --github-id N`, `index OWNER/REPO`,
@@ -337,43 +340,60 @@ $env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/codelens_test";
 pytest -q
 ```
 
-Expected: **157 passed**. No API keys or network are needed. The Gemini and GitHub
+Expected: **168 passed**. No API keys or network are needed. The Gemini and GitHub
 clients are exercised through their real SDK and HTTP code against mock transports;
 database tests use the separate `codelens_test` database.
 
 ## Evaluation
 
+Full methodology, metric definitions and results: **[docs/EVALUATION.md](docs/EVALUATION.md)**.
+
+* **Review benchmark v2:** 51 labelled PRs (38 seeded defects across 13 types, plus 13
+  clean PRs), split into dev / validation / holdout.
+* **Retrieval benchmark v2:** 40 labelled queries, same splits.
+* **Three configurations** on identical cases: `rules`, `llm` (no context) and
+  `llm_context` (CodeLens).
+* **Strict scoring:** right file, ±2 lines *and* the right category.
+
 ```powershell
-python -m app.evaluation.run retrieval
+python -m app.evaluation.run review --config all --split holdout
 ```
 
 ```powershell
-python -m app.evaluation.run review --mode llm
+python -m app.evaluation.run retrieval --split holdout
 ```
 
-Reports go to `benchmarks/results/` and appear on the dashboard's Analytics page.
-Measured on the owner's laptop (sample repository, 15 retrieval queries, 8 seeded
-defects + 3 clean PRs):
+Results appear on the dashboard's **Evaluation** page, with case inspection, and in
+`benchmarks/results/` as JSON plus CSV.
 
-| Retrieval | P@1 | R@5 | MRR |
+Measured so far:
+
+| Run | Precision | Recall | Clean-PR FP |
 |---|---|---|---|
-| BM25 | 0.933 | 0.978 | 0.967 |
-| Dense (Gemini) | 0.733 | 0.878 | 0.867 |
-| Hybrid (RRF) | 0.867 | 0.944 | 0.933 |
+| Rules only, v2 holdout (28 PRs) | 1.00 | 0.24 (5/21) | 0% |
+| LLM + context, v1 (11 PRs, `gemini-3.5-flash-lite`) | 0.875 | 0.875 (7/8) | 0% |
 
-| Review | Precision | Recall | Clean-PR false positives |
-|---|---|---|---|
-| Rules only | 1.00 | 0.375 | 0% |
-| LLM (`gemini-3.5-flash-lite`) + hybrid context | 0.875 | 0.875 | 0% |
+| Retrieval | P@1 | MRR |
+|---|---|---|
+| BM25, v2 holdout | 0.933 | 0.967 |
+| BM25 / Dense / Hybrid, v1 | 0.933 / 0.733 / 0.867 | 0.967 / 0.867 / 0.933 |
 
-Two honest notes:
-* **The IDOR case was detected but labelled `bug`, so it counts as a miss.** The root
-  cause was found and fixed: security routing ignored *removed* lines. The benchmark
-  has not been re-run since the fix.
-* **The one "false positive" is a real issue the label did not list** (a removed
-  discount cap). Labels are never changed after seeing results.
+On real `psf/requests` PRs, a correct fix (#7502) got no findings, which is correct.
+A subtle regression (#7433) was missed. Known issues are listed in
+[docs/EVALUATION.md §6](docs/EVALUATION.md#6-known-issues-and-observations).
 
-Details: [PROJECT_STATUS.md](PROJECT_STATUS.md).
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Components, data flow, database, retrieval, LangGraph, security |
+| [docs/DIAGRAMS.md](docs/DIAGRAMS.md) | Architecture, data-flow, sequence and ER diagrams (Mermaid) |
+| [docs/EVALUATION.md](docs/EVALUATION.md) | Benchmark design, metrics, results |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | ₹0 deployment: local Docker + Cloudflare Quick Tunnel + smee |
+| [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | 8–10 minute demo with fallbacks |
+| [docs/VIVA.md](docs/VIVA.md) | Viva questions and answers |
+| [docs/TECHNICAL_REPORT.md](docs/TECHNICAL_REPORT.md) | Project report |
+| [PROJECT_STATUS.md](PROJECT_STATUS.md) | What is verified, what is pending |
 
 ## Design decisions
 
@@ -394,8 +414,8 @@ Details: [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 ## Known limitations
 
-Python is the only reviewed language. The dashboard has no login, so keep it on
-localhost. Benchmarks are small. Free-tier rate limits make large PRs slow. Full list:
+Python is the only reviewed language. The dashboard has no user accounts; set
+`DASHBOARD_PASSWORD` before exposing it publicly (see docs/DEPLOYMENT.md). Benchmarks are small. Free-tier rate limits make large PRs slow. Full list:
 [PROJECT_STATUS.md](PROJECT_STATUS.md#6-known-limitations).
 
 ## Pushing this branch

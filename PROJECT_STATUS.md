@@ -4,49 +4,65 @@ Branch: `claude/full-project-implementation` (based on `d6a1998`). Last updated:
 
 Status keys:
 * ✅ **Verified**: implemented and run for real.
-* 🧪 **Not integration-tested**: implemented and tested against real code paths with
-  mock HTTP or fakes, but not yet run against the real external service.
-* ⏳ **Pending owner action**: needs something only the owner can do (GitHub App
-  install, Docker on the laptop).
+* 🧪 **Not integration-tested**: implemented and tested with mock HTTP or fakes only.
+* ⏳ **Pending owner action**: needs the owner's laptop, keys or GitHub account.
 
-## 1. Status report
+## 0. Acceptance criteria
+
+| # | Criterion | Status | Evidence / what is left |
+|---|---|---|---|
+| 1 | Existing and new tests pass | ✅ | 168 passed (this environment); 157 on the owner's laptop before the latest additions |
+| 2 | IDOR benchmark re-run after the fix | ⏳ | r03 is in the v2 **dev** split: `python -m app.evaluation.run review --config llm_context --split dev` |
+| 3 | Reproducible raw outputs | ✅ | every run stores run id, dataset and prompt hashes, model, generation config, raw model output, tokens, latency, failures |
+| 4 | Rules vs LLM-only vs LLM+context | ✅ framework / ⏳ LLM numbers | rules measured on holdout; `--config all --split holdout` on the laptop gives the LLM numbers |
+| 5 | Honest retrieval evaluation | ✅ framework / ⏳ dense numbers | 40 queries, NDCG@5, validation-only sweep; BM25 measured; dense/hybrid need the key |
+| 6 | All dashboard screens with real data | ✅ | 7 screens incl. Evaluation; verified with persisted reviews and real benchmark files; no console errors; no overflow at 390 px |
+| 7 | Docker stack on the Windows laptop | ✅ | owner's laptop: all services up, api healthy, dashboard served |
+| 8 | Real GitHub PR triggers an automatic review | ⏳ | needs the GitHub App installed on `codelens-demo` (README → GitHub App setup) |
+| 9 | Inline comments on GitHub | ⏳ | same step as 8 |
+| 10 | Dashboard shows the same review | ✅ for CLI-triggered real PRs (psf/requests #7502, #7433) / ⏳ for webhook-triggered | |
+| 11 | ₹0 deployment or local alternative | ✅ | docs/DEPLOYMENT.md: local Docker + Cloudflare Quick Tunnel + smee; dashboard password |
+| 12 | README and architecture docs | ✅ | README, ARCHITECTURE, docs/* |
+| 13 | Slides and viva preparation | ✅ viva, demo script, report, diagrams / ⏳ slides | the slides are built after the LLM holdout run, so they show final measured numbers |
+| 14 | No secrets exposed | ✅ | `.env` and `secrets/` are git- and docker-ignored; nothing logged; zip contains no secrets |
+| 15 | Reproducible demo from the instructions | ⏳ | confirmed once steps 8–9 run on the laptop |
+
+## 1. Component status
 
 | Area | Status | Evidence |
 |---|---|---|
-| FastAPI, config, webhook HMAC, ping/installation events | ✅ | `test_webhook.py`, `test_dashboard_api.py`; live uvicorn + Celery run |
-| PostgreSQL schema (4 migrations, additive) | ✅ | up/down/up on PG 16; `alembic check` clean; owner's laptop migrated |
-| Redis + Celery (acks_late, retries) | ✅ | live worker consumed a signed webhook; retry policy tests |
-| Tree-sitter chunking, lossless splitting, exclusions | ✅ | `test_chunker.py` (33) |
-| Gemini embeddings + Qdrant (incremental, failure-safe) | ✅ | real run on owner's laptop, 23 chunks in a Qdrant server |
-| Hybrid retrieval BM25 + dense + RRF | ✅ | all three modes measured with real Gemini embeddings |
-| LangGraph review pipeline (11 nodes, conditional security) | ✅ | real benchmark with `gemini-3.5-flash-lite`, 0 LLM errors |
-| Validation, dedup, severity, risk scoring | ✅ | unit + service tests; real benchmark |
-| Persistence: repos, PRs, reviews, findings, diffs, retrieval logs | ✅ | service and dashboard tests on real PostgreSQL |
-| Dashboard API (`/api/*`) | ✅ | `test_dashboard_api.py` on data produced by the real review service |
-| React dashboard (6 screens) | ✅ | built and screenshotted with real persisted reviews (rules-only data in this environment); no console errors; no horizontal overflow at 390 px |
-| GitHub App auth, PR fetch, review + inline comment posting | 🧪 | real httpx/PyJWT code against a mock GitHub transport. **Not yet run against github.com.** |
-| Automatic review of a real PR (webhook → GitHub comments) | ⏳ | needs the GitHub App installed on `codelens-demo` (README → Demo) |
-| `docker compose up --build` | ⏳ | compose config validated, frontend and Python stages build separately; images not built here (no Docker daemon) |
-| LangSmith tracing | 🧪 | env switch only; not tried with a real account |
-
-Nothing in the product is mocked or hardcoded. Mocks exist only in `tests/`.
-`scripts/seed_local_reviews.py` runs the real review service with pull request data
-read from local benchmark files instead of the GitHub API, and is clearly labelled
-`local/shopapp-benchmark` in the dashboard.
+| FastAPI, webhook HMAC, ping/installation events, dashboard password | ✅ | tests; live uvicorn + Celery runs |
+| PostgreSQL schema (4 additive migrations) | ✅ | up/down/up; `alembic check` clean; owner's laptop migrated |
+| Redis + Celery | ✅ | live worker; Docker on the owner's laptop |
+| Tree-sitter chunking (lossless splitting) | ✅ | tests; 342 chunks of psf/requests |
+| Gemini embeddings + Qdrant (incremental, free-tier pacing) | ✅ | real runs: 342 chunks; incremental re-index 71 embedded / 270 reused |
+| Hybrid retrieval | ✅ | real reviews used "hybrid"; benchmarks |
+| LangGraph pipeline with Gemini | ✅ | real runs, 0 LLM errors (benchmark v1, psf/requests) |
+| Persistence + dashboard API | ✅ | real-PR reviews stored and shown |
+| React dashboard | ✅ | 7 screens; production build |
+| GitHub App auth + posting reviews | 🧪 | mock-transport tests only; ⏳ real run |
+| Evaluation v2 framework | ✅ | rules + BM25 measured on holdout; LLM configs ⏳ |
+| LangSmith tracing | 🧪 | env switch only |
 
 ## 2. Test results
 
-`pytest -q`: **157 passed** (Python 3.13 in this environment; the owner's laptop
-passed 150 on Python 3.11 before the dashboard work).
+`pytest -q`: **168 passed** (Python 3.13 and Python 3.11 in this environment;
+the owner's laptop passed 157 before the evaluation v2 additions).
 
-| File | Passed | | File | Passed |
-|---|---|---|---|---|
-| test_chunker.py | 33 | | test_github.py | 14 |
-| test_embedder.py | 34 | | test_retriever.py | 12 |
-| test_review.py | 18 | | test_tasks_and_api.py | 10 |
-| test_review_service.py | 7 | | test_evaluation.py | 7 |
-| test_webhook.py | 7 | | test_dashboard_api.py | 5 |
-| test_db.py | 5 | | test_diff_parser.py | 5 |
+| File | Passed |
+|---|---|
+| test_chunker.py | 33 |
+| test_dashboard_api.py | 5 |
+| test_db.py | 5 |
+| test_diff_parser.py | 5 |
+| test_embedder.py | 38 |
+| test_evaluation.py | 10 |
+| test_github.py | 14 |
+| test_retriever.py | 12 |
+| test_review.py | 18 |
+| test_review_service.py | 9 |
+| test_tasks_and_api.py | 12 |
+| test_webhook.py | 7 |
 
 ## 3. Problems found and fixed (audit log)
 
