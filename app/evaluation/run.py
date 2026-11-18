@@ -1,27 +1,40 @@
 """
-Reproducible benchmarks.
+Reproducible benchmarks for CodeLens CI.
 
-  python -m app.evaluation.run retrieval [--modes bm25,dense,hybrid] [--k 5]
-  python -m app.evaluation.run review [--mode rules|llm]
+Review benchmark (benchmarks/review_benchmark.json):
 
-Retrieval: queries in benchmarks/retrieval_benchmark.json against the sample
-repository; metrics Precision@1/3/5, Recall@5, MRR and latency per mode.
-"bm25" needs nothing external. "dense"/"hybrid" call the real Gemini API
-(free tier) and use an in-memory Qdrant.
+  python -m app.evaluation.run review --config all --split holdout
+  python -m app.evaluation.run review --config llm_context --split validation --repeats 3
 
-Review: seeded-defect PRs in benchmarks/review_benchmark.json. "rules" runs
-the pipeline with no LLM (deterministic security rules only); "llm" runs the
-full pipeline with the real Gemini review model and retrieval context.
+  configs:  rules        deterministic security rules only (no LLM, no context)
+            llm          Gemini review of the diff, no repository context
+            llm_context  Gemini review + hybrid retrieval of repository context (CodeLens)
+            all          the three above, one after another (same cases, same model)
 
-Every report is written to benchmarks/results/ with `measured: true` and the
-exact configuration. Nothing here fabricates numbers: a mode that cannot run
-(e.g. no API key) is reported as skipped with the reason.
+Retrieval benchmark (benchmarks/retrieval_benchmark.json):
+
+  python -m app.evaluation.run retrieval --split holdout
+  python -m app.evaluation.run retrieval-sweep              (validation split only)
+
+Every run writes benchmarks/results/<run_id>.json (configuration, per-case
+predictions, raw model output, errors, latency, token usage), <run_id>-cases.csv
+and appends one row per configuration to benchmarks/results/summary.csv.
+
+Rules for honest numbers (also enforced in code where possible):
+  * Labels are never changed after looking at predictions.
+  * Tuning (prompts, retrieval parameters) uses dev/validation only; the
+    retrieval sweep refuses the holdout split. Headline results are holdout.
+  * Modes that cannot run (no API key) are reported as skipped, never estimated.
 """
 import argparse
+import csv
 import difflib
+import hashlib
 import json
 import platform
+import statistics
 import time
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -29,15 +42,19 @@ from app.config import settings
 from app.core.bm25 import BM25Index, tokenize
 from app.core.chunker import chunk_repository
 from app.core.diff_parser import parse_pull_request_files
-from app.core.retriever import HybridRetriever, bm25_document
-from app.evaluation.metrics import (precision_at_k, reciprocal_rank, recall_at_k, review_scores,
-                                    summarize_latencies)
+from app.core.retriever import RRF_K, HybridRetriever, bm25_document
+from app.evaluation.metrics import (ndcg_at_k, precision_at_k, reciprocal_rank, recall_at_k, review_scores,
+                                    score_review_cases, summarize_latencies)
 
 ROOT = Path(__file__).resolve().parents[2] / "benchmarks"
 SAMPLE_REPO = ROOT / "sample_repo"
 RESULTS = ROOT / "results"
 BENCH_REPO_ID = 1          # collection name used for the in-memory benchmark index
+REVIEW_CONFIGS = ("rules", "llm", "llm_context")
+SPLITS = ("dev", "validation", "holdout", "all")
 
+
+# ---------------------------------------------------------------- shared helpers
 
 def _label(payload: dict) -> str:
     return f"{payload['file']}::{payload['qualified_name']}"
@@ -47,52 +64,91 @@ def _unique(labels: list[str]) -> list[str]:
     return list(dict.fromkeys(labels))
 
 
-def _write(report: dict, name: str) -> Path:
-    RESULTS.mkdir(parents=True, exist_ok=True)
-    path = RESULTS / f"{name}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.json"
-    path.write_text(json.dumps(report, indent=2))
-    return path
+def _sha(path_or_text) -> str:
+    data = path_or_text.read_bytes() if isinstance(path_or_text, Path) else str(path_or_text).encode()
+    return hashlib.sha256(data).hexdigest()[:12]
+
+
+def _prompt_version() -> str:
+    from app.review.prompts import FOCUS, SYSTEM_PROMPT
+    return _sha(SYSTEM_PROMPT + json.dumps(FOCUS, sort_keys=True))
+
+
+def _now_id(prefix: str) -> str:
+    return f"{prefix}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}-{uuid.uuid4().hex[:6]}"
 
 
 def _environment() -> dict:
+    from app.review.llm import GENERATION_CONFIG
     return {"timestamp": datetime.now(UTC).isoformat(), "python": platform.python_version(),
             "embedding_model": "gemini-embedding-001", "dimensions": 1536,
-            "query_task_type": settings.EMBEDDING_QUERY_TASK_TYPE, "review_model": settings.GEMINI_REVIEW_MODEL}
+            "query_task_type": settings.EMBEDDING_QUERY_TASK_TYPE, "review_model": settings.GEMINI_REVIEW_MODEL,
+            "generation_config": GENERATION_CONFIG, "prompt_version": _prompt_version(),
+            "retrieval": {"top_k": settings.REVIEW_TOP_K, "rrf_k": RRF_K}}
+
+
+def _write(report: dict, name: str) -> Path:
+    RESULTS.mkdir(parents=True, exist_ok=True)
+    path = RESULTS / f"{name}.json"
+    path.write_text(json.dumps(report, indent=2, default=str))
+    return path
+
+
+def _append_summary(row: dict) -> None:
+    path = RESULTS / "summary.csv"
+    new = not path.exists()
+    with path.open("a", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(row))
+        if new:
+            writer.writeheader()
+        writer.writerow(row)
+
+
+def _in_split(case: dict, split: str) -> bool:
+    return split == "all" or case.get("split", "dev") == split
+
+
+def _index_sample_repo():
+    from qdrant_client import QdrantClient
+
+    from app.core.embedder import index_repository
+    qdrant = QdrantClient(":memory:")
+    started = time.perf_counter()
+    index_repository(BENCH_REPO_ID, chunk_repository(SAMPLE_REPO), qdrant=qdrant)
+    return HybridRetriever(BENCH_REPO_ID, qdrant), round(time.perf_counter() - started, 3)
 
 
 # ---------------------------------------------------------------- retrieval
 
-def run_retrieval(modes: list[str], k: int) -> dict:
-    dataset = json.loads((ROOT / "retrieval_benchmark.json").read_text())
+def run_retrieval(modes: list[str], k: int, split: str = "all", rrf_k: int = RRF_K,
+                  weights: tuple[float, float] = (1.0, 1.0), candidate_k: int | None = None) -> dict:
+    dataset_path = ROOT / "retrieval_benchmark.json"
+    dataset = json.loads(dataset_path.read_text())
+    cases = [c for c in dataset["cases"] if _in_split(c, split)]
     chunks = chunk_repository(SAMPLE_REPO)
     payloads = [c.to_dict() for c in chunks]
-    report = {"benchmark": "retrieval", "measured": True, "k": k, "corpus_chunks": len(chunks),
-              "queries": len(dataset["cases"]), "environment": _environment(), "modes": {}}
+    run_id = _now_id("retrieval")
+    report = {"benchmark": "retrieval", "measured": True, "run_id": run_id, "split": split, "k": k,
+              "dataset_version": _sha(dataset_path), "corpus_chunks": len(chunks), "queries": len(cases),
+              "params": {"rrf_k": rrf_k, "weights_dense_bm25": list(weights), "candidate_k": candidate_k},
+              "environment": _environment(), "modes": {}}
 
     retriever = None
-    index_seconds = None
     if any(m in ("dense", "hybrid") for m in modes):
         if not settings.GEMINI_API_KEY:
             for mode in modes:
                 if mode != "bm25":
                     report["modes"][mode] = {"skipped": "GEMINI_API_KEY not set"}
         else:
-            from qdrant_client import QdrantClient
-
-            from app.core.embedder import index_repository
-            qdrant = QdrantClient(":memory:")
-            started = time.perf_counter()
-            index_repository(BENCH_REPO_ID, chunks, qdrant=qdrant)
-            index_seconds = round(time.perf_counter() - started, 3)
-            retriever = HybridRetriever(BENCH_REPO_ID, qdrant)
-    report["index_seconds"] = index_seconds
+            retriever, report["index_seconds"] = _index_sample_repo()
 
     bm25 = BM25Index([bm25_document(p) for p in payloads])
+    vectors: dict[str, list[float]] = {}
     for mode in modes:
         if mode in report["modes"]:
             continue
         per_query, latencies = [], []
-        for case in dataset["cases"]:
+        for case in cases:
             relevant = set(case["relevant"])
             started = time.perf_counter()
             if mode == "bm25":
@@ -100,26 +156,50 @@ def run_retrieval(modes: list[str], k: int) -> dict:
                 order = sorted((i for i, s in enumerate(scores) if s > 0), key=lambda i: -scores[i])
                 ranked = _unique([_label(payloads[i]) for i in order])
             else:
-                result = retriever.search(case["query"], top_k=max(k, 10), mode=mode)
+                if case["id"] not in vectors:
+                    vectors[case["id"]] = retriever.embed(case["query"])   # one embedding per query
+                result = retriever.search(case["query"], top_k=max(k, 10), mode=mode, rrf_k=rrf_k,
+                                          weights=weights, candidate_k=candidate_k,
+                                          query_vector=vectors[case["id"]])
                 ranked = _unique([_label(c.payload) for c in result.chunks])
             latencies.append((time.perf_counter() - started) * 1000)
-            per_query.append({"id": case["id"], "top5": ranked[:5],
-                              "p@1": precision_at_k(ranked, relevant, 1),
-                              "p@3": precision_at_k(ranked, relevant, 3),
-                              f"p@{k}": precision_at_k(ranked, relevant, k),
-                              f"r@{k}": recall_at_k(ranked, relevant, k),
+            per_query.append({"id": case["id"], "split": case.get("split"), "kind": case.get("kind"),
+                              "top5": ranked[:5], "relevant": sorted(relevant),
+                              "p@1": precision_at_k(ranked, relevant, 1), "p@3": precision_at_k(ranked, relevant, 3),
+                              f"p@{k}": precision_at_k(ranked, relevant, k), f"r@{k}": recall_at_k(ranked, relevant, k),
+                              f"ndcg@{k}": round(ndcg_at_k(ranked, relevant, k), 4),
                               "rr": reciprocal_rank(ranked, relevant)})
-        n = len(per_query)
+        n = len(per_query) or 1
+        mean = lambda key: round(sum(q[key] for q in per_query) / n, 4)  # noqa: E731
         report["modes"][mode] = {
-            "precision@1": round(sum(q["p@1"] for q in per_query) / n, 4),
-            "precision@3": round(sum(q["p@3"] for q in per_query) / n, 4),
-            f"precision@{k}": round(sum(q[f"p@{k}"] for q in per_query) / n, 4),
-            f"recall@{k}": round(sum(q[f"r@{k}"] for q in per_query) / n, 4),
-            "mrr": round(sum(q["rr"] for q in per_query) / n, 4),
-            "latency": summarize_latencies(latencies),
-            "per_query": per_query,
+            "precision@1": mean("p@1"), "precision@3": mean("p@3"), f"precision@{k}": mean(f"p@{k}"),
+            f"recall@{k}": mean(f"r@{k}"), f"ndcg@{k}": mean(f"ndcg@{k}"), "mrr": mean("rr"),
+            "latency": summarize_latencies(latencies), "per_query": per_query,
         }
+    for mode, m in report["modes"].items():
+        if "skipped" not in m:
+            _append_summary({"run_id": run_id, "benchmark": "retrieval", "config": mode, "split": split,
+                             "n": len(cases), "p@1": m["precision@1"], f"p@{k}": m[f"precision@{k}"],
+                             f"r@{k}": m[f"recall@{k}"], f"ndcg@{k}": m[f"ndcg@{k}"], "mrr": m["mrr"],
+                             "params": json.dumps(report["params"]), "dataset_version": report["dataset_version"]})
     return report
+
+
+def run_retrieval_sweep(k: int = 5) -> dict:
+    """Grid over RRF parameters on the VALIDATION split only (never holdout)."""
+    if not settings.GEMINI_API_KEY:
+        return {"skipped": "GEMINI_API_KEY not set"}
+    grid = [(rrf_k, weights, cand) for rrf_k in (10, 30, 60) for weights in ((1.0, 1.0), (1.0, 2.0), (2.0, 1.0))
+            for cand in (20, 50)]
+    rows = []
+    for rrf_k, weights, cand in grid:
+        report = run_retrieval(["hybrid"], k, "validation", rrf_k, weights, cand)
+        m = report["modes"]["hybrid"]
+        rows.append({"rrf_k": rrf_k, "weights_dense_bm25": weights, "candidate_k": cand,
+                     "mrr": m["mrr"], f"ndcg@{k}": m[f"ndcg@{k}"], "precision@1": m["precision@1"]})
+    rows.sort(key=lambda r: (-r[f"ndcg@{k}"], -r["mrr"]))
+    return {"benchmark": "retrieval-sweep", "split": "validation", "measured": True, "results": rows,
+            "note": "Choose parameters from this table, then evaluate them ONCE on holdout."}
 
 
 # ---------------------------------------------------------------- review
@@ -146,64 +226,170 @@ def _expected_lines(case: dict, new: str) -> list[dict]:
     for item in case["expected"]:
         needle = item["match"].rstrip("\n")
         line = next(i for i, text in enumerate(lines, 1) if needle in text)
-        out.append({"file": case["file"], "line": line, "category": item["category"]})
+        out.append({"file": case["file"], "line": line, "category": item["category"],
+                    "type": item.get("type", item["category"]), "severity": item.get("severity")})
     return out
 
 
-def run_review(mode: str) -> dict:
-    dataset = json.loads((ROOT / "review_benchmark.json").read_text())
-    report = {"benchmark": "review", "measured": True, "mode": mode, "environment": _environment(),
-              "cases": []}
+def _run_config(config: str, cases: list[dict], repeats: int, retriever, llm) -> list[dict]:
+    from app.review.graph import ReviewPipeline
+    pipeline = ReviewPipeline(llm if config != "rules" else None,
+                              retriever if config == "llm_context" else None, top_k=settings.REVIEW_TOP_K)
+    runs = []
+    for repeat in range(repeats):
+        results = []
+        for case in cases:
+            base, new = _apply_case(case)
+            files = parse_pull_request_files([{"filename": case["file"], "status": "modified",
+                                               "patch": _github_patch(base, new)}])
+            started = time.perf_counter()
+            state = pipeline.run({"repo_full_name": "bench/sample", "pr_number": 0, "pr_title": case["title"],
+                                  "pr_body": "", "files": files, "file_contents": {case["file"]: new}})
+            calls = state.get("llm_calls", [])
+            results.append({
+                "id": case["id"], "split": case.get("split"), "repeat": repeat,
+                "expected": _expected_lines(case, new),
+                "predicted": [{"file": f.file, "start_line": f.start_line, "end_line": f.end_line,
+                               "category": f.category, "severity": f.severity, "status": f.status,
+                               "confidence": f.confidence, "title": f.title, "source": f.source}
+                              for f in state["findings"]],
+                "raw_model_findings": [f.model_dump() for f in state.get("raw_findings", [])
+                                       if not f.source.startswith("rule:")],
+                "raw_model_output": [c.get("raw_output") for c in calls],
+                "dropped": state.get("dropped", []),
+                "errors": state.get("errors", []),
+                "llm_calls": [{k: c.get(k) for k in ("focus", "ok", "error", "input_tokens", "output_tokens",
+                                                     "latency_ms", "attempts")} for c in calls],
+                "api_failures": sum(1 for c in calls if not c.get("ok")),
+                "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+                "risk": state["risk"]["label"],
+            })
+        runs.append(results)
+    return runs
+
+
+def _confirmed_only(results: list[dict]) -> list[dict]:
+    return [{**r, "predicted": [p for p in r["predicted"] if p["status"] == "confirmed"]} for r in results]
+
+
+def run_review(config: str, split: str = "holdout", repeats: int = 1) -> dict:
+    """Run one review configuration and return its report (also written to disk)."""
+    dataset_path = ROOT / "review_benchmark.json"
+    dataset = json.loads(dataset_path.read_text())
+    cases = [c for c in dataset["cases"] if _in_split(c, split)]
+    run_id = _now_id(f"review-{config}-{split}")
+    report = {"benchmark": "review", "measured": True, "run_id": run_id, "mode": config, "config": config,
+              "split": split, "repeats": repeats, "dataset_version": _sha(dataset_path),
+              "dataset_schema": dataset.get("version", "1"), "environment": _environment(), "n_cases": len(cases)}
+    if config == "rules":
+        report["environment"]["review_model"] = None
+
     llm = retriever = None
-    if mode == "llm":
+    if config in ("llm", "llm_context"):
         if not settings.GEMINI_API_KEY:
             return {**report, "skipped": "GEMINI_API_KEY not set"}
-        from qdrant_client import QdrantClient
-
-        from app.core.embedder import index_repository
         from app.review.llm import GeminiReviewLLM
-        qdrant = QdrantClient(":memory:")
-        index_repository(BENCH_REPO_ID, chunk_repository(SAMPLE_REPO), qdrant=qdrant)
-        retriever = HybridRetriever(BENCH_REPO_ID, qdrant)
         llm = GeminiReviewLLM()
+        if config == "llm_context":
+            retriever, report["index_seconds"] = _index_sample_repo()
 
-    from app.review.graph import ReviewPipeline
-    pipeline = ReviewPipeline(llm, retriever, top_k=settings.REVIEW_TOP_K)
-    scored_confirmed, scored_all, latencies = [], [], []
-    for case in dataset["cases"]:
-        base, new = _apply_case(case)
-        files = parse_pull_request_files([{"filename": case["file"], "status": "modified",
-                                           "patch": _github_patch(base, new)}])
-        started = time.perf_counter()
-        state = pipeline.run({"repo_full_name": "bench/sample", "pr_number": 0, "pr_title": case["title"],
-                              "pr_body": "", "files": files, "file_contents": {case["file"]: new}})
-        latencies.append((time.perf_counter() - started) * 1000)
-        expected = _expected_lines(case, new)
-        predicted_all = [{"file": f.file, "start_line": f.start_line, "end_line": f.end_line,
-                          "category": f.category, "status": f.status, "title": f.title, "source": f.source}
-                         for f in state["findings"]]
-        confirmed = [p for p in predicted_all if p["status"] == "confirmed"]
-        scored_confirmed.append({"predicted": confirmed, "expected": expected})
-        scored_all.append({"predicted": predicted_all, "expected": expected})
-        report["cases"].append({"id": case["id"], "expected": expected, "predicted": predicted_all,
-                                "errors": state.get("errors", []), "latency_ms": round(latencies[-1], 1),
-                                "risk": state["risk"]["label"]})
-    report["confirmed_only"] = review_scores(scored_confirmed)
-    report["including_possible"] = review_scores(scored_all)
-    report["latency"] = summarize_latencies(latencies)
+    runs = _run_config(config, cases, repeats, retriever, llm)
+    per_run = [score_review_cases(_confirmed_only(r)) for r in runs]
+    report["cases"] = runs[0] if repeats == 1 else [c for run in runs for c in run]
+    report["confirmed_only"] = per_run[0] if repeats == 1 else _mean_metrics(per_run)
+    report["including_possible"] = score_review_cases(runs[0])
+    report["legacy_scores"] = review_scores(_confirmed_only(runs[0]))     # v1 metric, for comparison
+    if repeats > 1:
+        f1s = [m["f1"] or 0.0 for m in per_run]
+        report["variability"] = {
+            "f1_per_run": f1s, "f1_mean": round(statistics.mean(f1s), 4),
+            "f1_stdev": round(statistics.stdev(f1s), 4) if len(f1s) > 1 else 0.0,
+            "case_agreement": _case_agreement(runs),
+        }
+    all_cases = [c for run in runs for c in run]
+    tokens = [c.get("input_tokens", 0) + c.get("output_tokens", 0) for r in all_cases for c in r["llm_calls"]
+              if c.get("ok") and c.get("input_tokens") is not None]
+    report["latency"] = summarize_latencies([r["latency_ms"] for r in all_cases])
+    report["tokens"] = {"total": sum(tokens), "per_case_mean": round(sum(tokens) / len(all_cases), 1) if all_cases else 0,
+                        "reported_calls": len(tokens)}
+    report["api_failures"] = sum(r["api_failures"] for r in all_cases)
+    report["cases_with_errors"] = sum(1 for r in runs[0] if r["api_failures"])
+
+    m = report["confirmed_only"]
+    _append_summary({"run_id": run_id, "benchmark": "review", "config": config, "split": split,
+                     "n": len(cases), "repeats": repeats, "precision": m["precision"], "recall": m["recall"],
+                     "f1": m["f1"], "clean_fp_rate": m["clean_case_false_positive_rate"],
+                     "category_accuracy": m["category_accuracy"], "line_exact": m["line_exact"],
+                     "model": report["environment"]["review_model"], "prompt_version": report["environment"]["prompt_version"],
+                     "dataset_version": report["dataset_version"], "api_failures": report["api_failures"]})
+    _write_cases_csv(run_id, runs)
     return report
 
 
+def _mean_metrics(per_run: list[dict]) -> dict:
+    keys = ("precision", "recall", "f1", "lenient_precision", "lenient_recall", "lenient_f1", "false_negative_rate",
+            "clean_case_false_positive_rate", "category_accuracy", "severity_exact", "severity_within_one",
+            "line_exact", "duplicate_rate")
+    mean = dict(per_run[0])
+    for key in keys:
+        values = [m[key] for m in per_run if m[key] is not None]
+        mean[key] = round(statistics.mean(values), 4) if values else None
+    mean["note"] = f"mean over {len(per_run)} runs; counts and matrices are from run 1"
+    return mean
+
+
+def _case_agreement(runs: list[list[dict]]) -> dict:
+    """Per case: fraction of runs whose confirmed findings fully detect every expected defect."""
+    out = {}
+    for i, case in enumerate(runs[0]):
+        hits = 0
+        for run in runs:
+            scored = score_review_cases(_confirmed_only([run[i]]))
+            hits += (scored["true_positives"] == scored["expected"] and scored["false_positives"] == 0)
+        out[case["id"]] = round(hits / len(runs), 3)
+    return out
+
+
+def _write_cases_csv(run_id: str, runs: list[list[dict]]) -> None:
+    path = RESULTS / f"{run_id}-cases.csv"
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["run_id", "repeat", "case", "split", "expected", "predicted_confirmed", "strict_tp",
+                         "false_positives", "duplicates", "api_failures", "latency_ms", "risk"])
+        for run in runs:
+            for r in run:
+                s = score_review_cases(_confirmed_only([r]))
+                writer.writerow([run_id, r["repeat"], r["id"], r["split"],
+                                 ";".join(f"{e['type']}@{e['line']}" for e in r["expected"]) or "clean",
+                                 ";".join(f"{p['category']}@{p['start_line']}" for p in r["predicted"]
+                                          if p["status"] == "confirmed"),
+                                 s["true_positives"], s["false_positives"], s["duplicates"],
+                                 r["api_failures"], r["latency_ms"], r["risk"]])
+
+
+# ---------------------------------------------------------------- CLI
+
 def _print_retrieval(report: dict) -> None:
     k = report["k"]
-    print(f"Retrieval benchmark: {report['queries']} queries, {report['corpus_chunks']} chunks")
-    print(f"{'mode':8} {'P@1':>6} {'P@3':>6} {'P@'+str(k):>6} {'R@'+str(k):>6} {'MRR':>6} {'median ms':>10}")
+    print(f"Retrieval benchmark [{report['split']}]: {report['queries']} queries, {report['corpus_chunks']} chunks")
+    print(f"{'mode':8} {'P@1':>6} {'P@'+str(k):>6} {'R@'+str(k):>6} {'NDCG':>6} {'MRR':>6} {'median ms':>10}")
     for mode, m in report["modes"].items():
         if "skipped" in m:
             print(f"{mode:8} skipped: {m['skipped']}")
             continue
-        print(f"{mode:8} {m['precision@1']:6.3f} {m['precision@3']:6.3f} {m[f'precision@{k}']:6.3f} "
-              f"{m[f'recall@{k}']:6.3f} {m['mrr']:6.3f} {m['latency']['median_ms']:10.2f}")
+        print(f"{mode:8} {m['precision@1']:6.3f} {m[f'precision@{k}']:6.3f} {m[f'recall@{k}']:6.3f} "
+              f"{m[f'ndcg@{k}']:6.3f} {m['mrr']:6.3f} {m['latency']['median_ms']:10.2f}")
+
+
+def _print_review(report: dict) -> None:
+    if "skipped" in report:
+        print(f"{report['config']:12} skipped: {report['skipped']}")
+        return
+    m = report["confirmed_only"]
+    fmt = lambda v: "  -  " if v is None else f"{v:5.3f}"  # noqa: E731
+    print(f"{report['config']:12} P {fmt(m['precision'])}  R {fmt(m['recall'])}  F1 {fmt(m['f1'])}  "
+          f"cleanFP {fmt(m['clean_case_false_positive_rate'])}  cat {fmt(m['category_accuracy'])}  "
+          f"line {fmt(m['line_exact'])}  dup {fmt(m['duplicate_rate'])}  api_fail {report['api_failures']}")
 
 
 def main() -> None:
@@ -212,23 +398,40 @@ def main() -> None:
     r = sub.add_parser("retrieval")
     r.add_argument("--modes", default="bm25,dense,hybrid")
     r.add_argument("--k", type=int, default=5)
+    r.add_argument("--split", choices=SPLITS, default="all")
+    r.add_argument("--rrf-k", type=int, default=RRF_K)
+    r.add_argument("--weights", default="1,1", help="dense,bm25 RRF weights")
+    sub.add_parser("retrieval-sweep", help="RRF parameter grid on the validation split")
     v = sub.add_parser("review")
-    v.add_argument("--mode", choices=("rules", "llm"), default="llm")
+    v.add_argument("--config", choices=(*REVIEW_CONFIGS, "all"), default="all")
+    v.add_argument("--mode", choices=("rules", "llm"), help="deprecated alias: rules -> rules, llm -> llm_context")
+    v.add_argument("--split", choices=SPLITS, default="holdout")
+    v.add_argument("--repeats", type=int, default=1)
     args = parser.parse_args()
 
     if args.benchmark == "retrieval":
-        report = run_retrieval([m.strip() for m in args.modes.split(",")], args.k)
+        weights = tuple(float(x) for x in args.weights.split(","))
+        report = run_retrieval([m.strip() for m in args.modes.split(",")], args.k, args.split, args.rrf_k, weights)
         _print_retrieval(report)
-        print("report:", _write(report, "retrieval"))
-    else:
-        report = run_review(args.mode)
+        print("report:", _write(report, report["run_id"]))
+    elif args.benchmark == "retrieval-sweep":
+        report = run_retrieval_sweep()
         if "skipped" in report:
-            print("review benchmark skipped:", report["skipped"])
+            print("sweep skipped:", report["skipped"])
             return
-        print(json.dumps({"mode": report["mode"], "confirmed_only": report["confirmed_only"],
-                          "including_possible": report["including_possible"],
-                          "latency": report["latency"]}, indent=2))
-        print("report:", _write(report, f"review-{args.mode}"))
+        for row in report["results"][:10]:
+            print(row)
+        print("report:", _write(report, _now_id("retrieval-sweep")))
+    else:
+        configs = list(REVIEW_CONFIGS) if args.config == "all" else [args.config]
+        if args.mode:
+            configs = ["rules" if args.mode == "rules" else "llm_context"]
+        print(f"Review benchmark, split={args.split}, repeats={args.repeats}")
+        for config in configs:
+            report = run_review(config, args.split, args.repeats)
+            _print_review(report)
+            if "skipped" not in report:
+                print("  report:", _write(report, report["run_id"]))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,377 @@
+{
+  "benchmark": "retrieval",
+  "measured": true,
+  "run_id": "retrieval-20261118T130134Z-ca23ac",
+  "split": "holdout",
+  "k": 5,
+  "dataset_version": "0701a186a773",
+  "corpus_chunks": 34,
+  "queries": 15,
+  "params": {
+    "rrf_k": 60,
+    "weights_dense_bm25": [
+      1.0,
+      1.0
+    ],
+    "candidate_k": null
+  },
+  "environment": {
+    "timestamp": "2026-11-18T13:01:34.282375+00:00",
+    "python": "3.13.18",
+    "embedding_model": "gemini-embedding-001",
+    "dimensions": 1536,
+    "query_task_type": "CODE_RETRIEVAL_QUERY",
+    "review_model": "gemini-3.5-flash-lite",
+    "generation_config": {
+      "temperature": 0.1,
+      "max_output_tokens": 8192,
+      "response_mime_type": "application/json"
+    },
+    "prompt_version": "5a9b3b443111",
+    "retrieval": {
+      "top_k": 5,
+      "rrf_k": 60
+    }
+  },
+  "modes": {
+    "bm25": {
+      "precision@1": 0.9333,
+      "precision@3": 0.4444,
+      "precision@5": 0.28,
+      "recall@5": 0.9333,
+      "ndcg@5": 0.9156,
+      "mrr": 0.9667,
+      "latency": {
+        "n": 15,
+        "mean_ms": 0.05,
+        "median_ms": 0.04,
+        "p95_ms": 0.08,
+        "max_ms": 0.09
+      },
+      "per_query": [
+        {
+          "id": "q26",
+          "split": "holdout",
+          "kind": "code",
+          "top5": [
+            "shopapp/admin.py::set_user_role",
+            "shopapp/admin.py::delete_user",
+            "shopapp/orders.py::get_order",
+            "shopapp/auth.py::get_user_for_session",
+            "shopapp/orders.py::refund_order"
+          ],
+          "relevant": [
+            "shopapp/admin.py::set_user_role"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.3333333333333333,
+          "p@5": 0.2,
+          "r@5": 1.0,
+          "ndcg@5": 1.0,
+          "rr": 1.0
+        },
+        {
+          "id": "q27",
+          "split": "holdout",
+          "kind": "code",
+          "top5": [
+            "shopapp/inventory.py::reserve_items",
+            "shopapp/inventory.py::get_stock",
+            "shopapp/inventory.py::low_stock_products",
+            "shopapp/orders.py::create_order",
+            "shopapp/orders.py::change_status"
+          ],
+          "relevant": [
+            "shopapp/inventory.py::get_stock",
+            "shopapp/inventory.py::reserve_items"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.6666666666666666,
+          "p@5": 0.4,
+          "r@5": 1.0,
+          "ndcg@5": 1.0,
+          "rr": 1.0
+        },
+        {
+          "id": "q28",
+          "split": "holdout",
+          "kind": "natural_language",
+          "top5": [
+            "shopapp/admin.py::list_users",
+            "shopapp/orders.py::refund_order",
+            "shopapp/admin.py::set_user_role",
+            "shopapp/reports.py::sales_by_country",
+            "shopapp/auth.py::require_role"
+          ],
+          "relevant": [
+            "shopapp/admin.py::list_users"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.3333333333333333,
+          "p@5": 0.2,
+          "r@5": 1.0,
+          "ndcg@5": 1.0,
+          "rr": 1.0
+        },
+        {
+          "id": "q29",
+          "split": "holdout",
+          "kind": "code",
+          "top5": [
+            "shopapp/api.py::notify_partner",
+            "shopapp/api.py::handle_import_settings",
+            "shopapp/api.py::handle_get_order",
+            "shopapp/orders.py::change_status",
+            "shopapp/api.py::current_user"
+          ],
+          "relevant": [
+            "shopapp/api.py::notify_partner"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.3333333333333333,
+          "p@5": 0.2,
+          "r@5": 1.0,
+          "ndcg@5": 1.0,
+          "rr": 1.0
+        },
+        {
+          "id": "q30",
+          "split": "holdout",
+          "kind": "natural_language",
+          "top5": [
+            "shopapp/orders.py::refund_order",
+            "shopapp/api.py::notify_partner",
+            "shopapp/orders.py::get_order",
+            "shopapp/api.py::handle_get_order",
+            "shopapp/orders.py::change_status"
+          ],
+          "relevant": [
+            "shopapp/auth.py::require_role",
+            "shopapp/orders.py::refund_order"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.3333333333333333,
+          "p@5": 0.2,
+          "r@5": 0.5,
+          "ndcg@5": 0.6131,
+          "rr": 1.0
+        },
+        {
+          "id": "q31",
+          "split": "holdout",
+          "kind": "code",
+          "top5": [
+            "shopapp/auth.py::verify_password",
+            "shopapp/auth.py::hash_password",
+            "shopapp/orders.py::change_status",
+            "shopapp/api.py::current_user",
+            "shopapp/admin.py::delete_user"
+          ],
+          "relevant": [
+            "shopapp/auth.py::hash_password",
+            "shopapp/auth.py::verify_password"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.6666666666666666,
+          "p@5": 0.4,
+          "r@5": 1.0,
+          "ndcg@5": 1.0,
+          "rr": 1.0
+        },
+        {
+          "id": "q32",
+          "split": "holdout",
+          "kind": "natural_language",
+          "top5": [
+            "shopapp/notifications.py::send_email",
+            "shopapp/orders.py::refund_order",
+            "shopapp/admin.py::list_users",
+            "shopapp/reports.py::sales_by_country",
+            "shopapp/admin.py::set_user_role"
+          ],
+          "relevant": [
+            "shopapp/notifications.py::send_email"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.3333333333333333,
+          "p@5": 0.2,
+          "r@5": 1.0,
+          "ndcg@5": 1.0,
+          "rr": 1.0
+        },
+        {
+          "id": "q33",
+          "split": "holdout",
+          "kind": "code",
+          "top5": [
+            "shopapp/inventory.py::low_stock_products",
+            "shopapp/inventory.py::get_stock",
+            "shopapp/inventory.py::reserve_items",
+            "shopapp/admin.py::list_users",
+            "shopapp/auth.py::get_user_for_session"
+          ],
+          "relevant": [
+            "shopapp/inventory.py::low_stock_products",
+            "shopapp/storage.py::Database.fetch_all"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.3333333333333333,
+          "p@5": 0.2,
+          "r@5": 0.5,
+          "ndcg@5": 0.6131,
+          "rr": 1.0
+        },
+        {
+          "id": "q34",
+          "split": "holdout",
+          "kind": "natural_language",
+          "top5": [
+            "shopapp/uploads.py::save_upload",
+            "shopapp/uploads.py::safe_upload_path",
+            "shopapp/orders.py::change_status",
+            "shopapp/admin.py::delete_user"
+          ],
+          "relevant": [
+            "shopapp/uploads.py::safe_upload_path"
+          ],
+          "p@1": 0.0,
+          "p@3": 0.3333333333333333,
+          "p@5": 0.2,
+          "r@5": 1.0,
+          "ndcg@5": 0.6309,
+          "rr": 0.5
+        },
+        {
+          "id": "q35",
+          "split": "holdout",
+          "kind": "code",
+          "top5": [
+            "shopapp/orders.py::create_order",
+            "shopapp/billing.py::order_total",
+            "shopapp/auth.py::create_session",
+            "shopapp/reports.py::sales_by_country",
+            "shopapp/orders.py::get_order"
+          ],
+          "relevant": [
+            "shopapp/billing.py::order_total",
+            "shopapp/orders.py::create_order"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.6666666666666666,
+          "p@5": 0.4,
+          "r@5": 1.0,
+          "ndcg@5": 1.0,
+          "rr": 1.0
+        },
+        {
+          "id": "q36",
+          "split": "holdout",
+          "kind": "natural_language",
+          "top5": [
+            "shopapp/orders.py::change_status",
+            "shopapp/orders.py::get_order",
+            "shopapp/orders.py::refund_order",
+            "shopapp/api.py::handle_get_order",
+            "shopapp/uploads.py::safe_upload_path"
+          ],
+          "relevant": [
+            "shopapp/orders.py::change_status"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.3333333333333333,
+          "p@5": 0.2,
+          "r@5": 1.0,
+          "ndcg@5": 1.0,
+          "rr": 1.0
+        },
+        {
+          "id": "q37",
+          "split": "holdout",
+          "kind": "code",
+          "top5": [
+            "shopapp/reports.py::export_csv",
+            "shopapp/admin.py::list_users",
+            "shopapp/admin.py::delete_user",
+            "shopapp/admin.py::set_user_role",
+            "shopapp/reports.py::sales_by_country"
+          ],
+          "relevant": [
+            "shopapp/admin.py::list_users",
+            "shopapp/reports.py::export_csv"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.6666666666666666,
+          "p@5": 0.4,
+          "r@5": 1.0,
+          "ndcg@5": 1.0,
+          "rr": 1.0
+        },
+        {
+          "id": "q38",
+          "split": "holdout",
+          "kind": "natural_language",
+          "top5": [
+            "shopapp/notifications.py::render_template",
+            "shopapp/uploads.py::safe_upload_path",
+            "shopapp/notifications.py::send_email",
+            "shopapp/orders.py::refund_order",
+            "shopapp/admin.py::list_users"
+          ],
+          "relevant": [
+            "shopapp/notifications.py::render_template"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.3333333333333333,
+          "p@5": 0.2,
+          "r@5": 1.0,
+          "ndcg@5": 1.0,
+          "rr": 1.0
+        },
+        {
+          "id": "q39",
+          "split": "holdout",
+          "kind": "code",
+          "top5": [
+            "shopapp/storage.py::Database.execute",
+            "shopapp/storage.py::Database",
+            "shopapp/storage.py::Database.fetch_one",
+            "shopapp/storage.py::Database.fetch_all",
+            "shopapp/storage.py::Database.__init__"
+          ],
+          "relevant": [
+            "shopapp/storage.py::Database",
+            "shopapp/storage.py::Database.execute"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.6666666666666666,
+          "p@5": 0.4,
+          "r@5": 1.0,
+          "ndcg@5": 1.0,
+          "rr": 1.0
+        },
+        {
+          "id": "q40",
+          "split": "holdout",
+          "kind": "natural_language",
+          "top5": [
+            "shopapp/orders.py::get_order",
+            "shopapp/orders.py::create_order",
+            "shopapp/orders.py::refund_order",
+            "shopapp/api.py::handle_get_order",
+            "shopapp/orders.py::change_status"
+          ],
+          "relevant": [
+            "shopapp/api.py::handle_get_order",
+            "shopapp/orders.py::get_order"
+          ],
+          "p@1": 1.0,
+          "p@3": 0.3333333333333333,
+          "p@5": 0.4,
+          "r@5": 1.0,
+          "ndcg@5": 0.8772,
+          "rr": 1.0
+        }
+      ]
+    }
+  }
+}

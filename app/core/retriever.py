@@ -109,8 +109,8 @@ class HybridRetriever:
         return len(self._ids or [])
 
     # ---- individual retrievers --------------------------------------------
-    def _dense(self, query: str, limit: int) -> list[tuple[str, float, dict]]:
-        vector = embed_query(query, client=self.gemini_client)
+    def _dense(self, query: str, limit: int, vector: list[float] | None = None) -> list[tuple[str, float, dict]]:
+        vector = vector or embed_query(query, client=self.gemini_client)
         response = self.qdrant.query_points(self.collection, query=vector, limit=limit, with_payload=True)
         return [(str(p.id), float(p.score), p.payload or {}) for p in response.points]
 
@@ -121,9 +121,15 @@ class HybridRetriever:
         return [(self._ids[i], scores[i], self._payloads[i]) for i in order[:limit]]
 
     # ---- public API -------------------------------------------------------
+    def embed(self, query: str) -> list[float]:
+        """Query vector (lets callers reuse one embedding across many searches)."""
+        return embed_query(query, client=self.gemini_client)
+
     def search(self, query: str, top_k: int = 5, mode: str = "hybrid",
                exclude: Callable[[dict], bool] | None = None,
-               candidate_k: int | None = None, collapse_parts: bool = True) -> RetrievalResult:
+               candidate_k: int | None = None, collapse_parts: bool = True,
+               rrf_k: int = RRF_K, weights: tuple[float, float] = (1.0, 1.0),
+               query_vector: list[float] | None = None) -> RetrievalResult:
         """Return up to top_k relevant chunks for `query`.
 
         exclude(payload) -> True drops a chunk (e.g. the changed code itself).
@@ -145,7 +151,7 @@ class HybridRetriever:
         if mode in ("hybrid", "dense"):
             t0 = time.perf_counter()
             try:
-                dense_hits = self._dense(query, candidate_k)
+                dense_hits = self._dense(query, candidate_k, query_vector)
             except EmbeddingError as exc:
                 if mode == "dense":
                     raise
@@ -175,7 +181,8 @@ class HybridRetriever:
             elif used_mode == "bm25":
                 chunk.score = chunk.bm25_score or 0.0
             else:
-                chunk.score = sum(1.0 / (RRF_K + r) for r in (chunk.dense_rank, chunk.bm25_rank) if r)
+                # Weighted RRF: weights = (dense, bm25); defaults (1, 1) = standard RRF.
+                chunk.score = sum(w / (rrf_k + r) for w, r in zip(weights, (chunk.dense_rank, chunk.bm25_rank)) if r)
 
         ranked = sorted(merged.values(), key=lambda c: (-c.score, c.point_id))
         results: list[RetrievedChunk] = []

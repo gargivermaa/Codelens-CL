@@ -1,43 +1,1034 @@
 {
-  "description": "Seeded-defect PRs against benchmarks/sample_repo. Each case replaces lines of one file; `expected` lists the defects a correct reviewer must report (file, line in the NEW file, category). Clean cases (expected = []) measure false positives.",
-  "repo": "sample_repo",
-  "cases": [
-    {"id": "r01", "file": "shopapp/auth.py", "title": "Simplify session tokens",
-     "replace": [["import secrets\n", "import random\nimport secrets\n"],
-                 ["    token = secrets.token_urlsafe(32)\n", "    token = str(random.randint(0, 10**6))\n"]],
-     "expected": [{"match": "random.randint", "category": "security"}]},
-    {"id": "r02", "file": "shopapp/reports.py", "title": "Add per-country order listing",
-     "append": "\n\ndef orders_for_country(db: Database, country: str) -> list[dict]:\n    return db.fetch_all(f\"SELECT * FROM orders WHERE country = '{country}'\")\n",
-     "expected": [{"match": "WHERE country = '{country}'", "category": "security"}]},
-    {"id": "r03", "file": "shopapp/orders.py", "title": "Simplify order lookup",
-     "replace": [["    if order is None or (order[\"user_id\"] != user[\"id\"] and user.get(\"role\") != \"admin\"):\n", "    if order is None:\n"]],
-     "expected": [{"match": "    if order is None:", "category": "security"}]},
-    {"id": "r04", "file": "shopapp/billing.py", "title": "Allow bigger festive discounts",
-     "replace": [["    percent = min(COUPONS.get(coupon_code.upper(), 0), MAX_DISCOUNT_PERCENT)\n    return subtotal_cents * percent // 100\n",
-                  "    percent = COUPONS.get(coupon_code.upper(), 0)\n    return subtotal_cents * percent // 10\n"]],
-     "expected": [{"match": "percent // 10", "category": "bug"}]},
-    {"id": "r05", "file": "shopapp/uploads.py", "title": "Faster uploads",
-     "replace": [["    path = safe_upload_path(filename)\n", "    path = UPLOAD_ROOT / filename\n"]],
-     "expected": [{"match": "UPLOAD_ROOT / filename", "category": "security"}]},
-    {"id": "r06", "file": "shopapp/notifications.py", "title": "Use system sendmail",
-     "replace": [["import smtplib\n", "import smtplib\nimport subprocess\n"]],
-     "append": "\n\ndef send_with_sendmail(to: str, message: str) -> None:\n    subprocess.run(f\"echo '{message}' | sendmail {to}\", shell=True, check=True)\n",
-     "expected": [{"match": "shell=True", "category": "security"}]},
-    {"id": "r07", "file": "shopapp/notifications.py", "title": "Configure SMTP auth",
-     "replace": [["SMTP_HOST = \"localhost\"\n", "SMTP_HOST = \"localhost\"\nSMTP_PASSWORD = \"s3cr3t-Passw0rd-123\"\n"]],
-     "expected": [{"match": "SMTP_PASSWORD", "category": "security"}]},
-    {"id": "r08", "file": "shopapp/billing.py", "title": "Tax refactor",
-     "replace": [["    return amount_cents + amount_cents * rate // 100\n", "    return amount_cents + amount_cents * rate\n"]],
-     "expected": [{"match": "amount_cents * rate\n", "category": "bug"}]},
-    {"id": "c01", "file": "shopapp/billing.py", "title": "Add money formatting helper",
-     "append": "\n\ndef format_cents(cents: int) -> str:\n    sign = \"-\" if cents < 0 else \"\"\n    cents = abs(cents)\n    return f\"{sign}{cents // 100}.{cents % 100:02d}\"\n",
-     "expected": []},
-    {"id": "c02", "file": "shopapp/reports.py", "title": "Document export",
-     "replace": [["def export_csv(rows: list[dict]) -> str:\n", "def export_csv(rows: list[dict]) -> str:\n    \"\"\"Serialize report rows as CSV with a header row.\"\"\"\n"]],
-     "expected": []},
-    {"id": "c03", "file": "shopapp/orders.py", "title": "Validate empty status",
-     "replace": [["    if new_status not in VALID_TRANSITIONS.get(order[\"status\"], set()):\n",
-                  "    if not new_status:\n        raise ValueError(\"new status is required\")\n    if new_status not in VALID_TRANSITIONS.get(order[\"status\"], set()):\n"]],
-     "expected": []}
-  ]
+ "version": "2.0",
+ "description": "Seeded-defect PRs against benchmarks/sample_repo. Each case changes one file; `expected` lists the defects a correct reviewer must report. Clean cases (expected = []) measure false positives. Splits: dev (the original 11 cases; already inspected during development), validation (for tuning), holdout (never used for tuning; headline results). Labels were written before any model saw the validation/holdout cases. Severity/type labels of dev cases were added later and are not used for headline claims.",
+ "repo": "sample_repo",
+ "cases": [
+  {
+   "id": "r01",
+   "file": "shopapp/auth.py",
+   "title": "Simplify session tokens",
+   "replace": [
+    [
+     "import secrets\n",
+     "import random\nimport secrets\n"
+    ],
+    [
+     "    token = secrets.token_urlsafe(32)\n",
+     "    token = str(random.randint(0, 10**6))\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "random.randint",
+     "category": "security",
+     "type": "weak_randomness",
+     "severity": "high",
+     "explanation": "Session tokens from random.randint are guessable (10^6 values).",
+     "reference_fix": "token = secrets.token_urlsafe(32)"
+    }
+   ],
+   "split": "dev",
+   "origin": "synthetic"
+  },
+  {
+   "id": "r02",
+   "file": "shopapp/reports.py",
+   "title": "Add per-country order listing",
+   "append": "\n\ndef orders_for_country(db: Database, country: str) -> list[dict]:\n    return db.fetch_all(f\"SELECT * FROM orders WHERE country = '{country}'\")\n",
+   "expected": [
+    {
+     "match": "WHERE country = '{country}'",
+     "category": "security",
+     "type": "sql_injection",
+     "severity": "high",
+     "explanation": "country is formatted into SQL text.",
+     "reference_fix": "db.fetch_all(\"SELECT * FROM orders WHERE country = %s\", (country,))"
+    }
+   ],
+   "split": "dev",
+   "origin": "synthetic"
+  },
+  {
+   "id": "r03",
+   "file": "shopapp/orders.py",
+   "title": "Simplify order lookup",
+   "replace": [
+    [
+     "    if order is None or (order[\"user_id\"] != user[\"id\"] and user.get(\"role\") != \"admin\"):\n",
+     "    if order is None:\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "    if order is None:",
+     "category": "security",
+     "type": "idor",
+     "severity": "high",
+     "explanation": "Ownership/admin check removed: any user can read any order.",
+     "reference_fix": "Keep: if order is None or (order['user_id'] != user['id'] and user.get('role') != 'admin')"
+    }
+   ],
+   "split": "dev",
+   "origin": "synthetic"
+  },
+  {
+   "id": "r04",
+   "file": "shopapp/billing.py",
+   "title": "Allow bigger festive discounts",
+   "replace": [
+    [
+     "    percent = min(COUPONS.get(coupon_code.upper(), 0), MAX_DISCOUNT_PERCENT)\n    return subtotal_cents * percent // 100\n",
+     "    percent = COUPONS.get(coupon_code.upper(), 0)\n    return subtotal_cents * percent // 10\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "percent // 10",
+     "category": "bug",
+     "type": "logic",
+     "severity": "high",
+     "explanation": "Discount divided by 10 instead of 100 (10x discount).",
+     "reference_fix": "return subtotal_cents * percent // 100"
+    }
+   ],
+   "split": "dev",
+   "origin": "synthetic"
+  },
+  {
+   "id": "r05",
+   "file": "shopapp/uploads.py",
+   "title": "Faster uploads",
+   "replace": [
+    [
+     "    path = safe_upload_path(filename)\n",
+     "    path = UPLOAD_ROOT / filename\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "UPLOAD_ROOT / filename",
+     "category": "security",
+     "type": "path_traversal",
+     "severity": "high",
+     "explanation": "Filename joined to the upload root without safe_upload_path.",
+     "reference_fix": "path = safe_upload_path(filename)"
+    }
+   ],
+   "split": "dev",
+   "origin": "synthetic"
+  },
+  {
+   "id": "r06",
+   "file": "shopapp/notifications.py",
+   "title": "Use system sendmail",
+   "replace": [
+    [
+     "import smtplib\n",
+     "import smtplib\nimport subprocess\n"
+    ]
+   ],
+   "append": "\n\ndef send_with_sendmail(to: str, message: str) -> None:\n    subprocess.run(f\"echo '{message}' | sendmail {to}\", shell=True, check=True)\n",
+   "expected": [
+    {
+     "match": "shell=True",
+     "category": "security",
+     "type": "command_injection",
+     "severity": "critical",
+     "explanation": "User values interpolated into a shell command.",
+     "reference_fix": "subprocess.run(['sendmail', to], input=message.encode(), check=True)"
+    }
+   ],
+   "split": "dev",
+   "origin": "synthetic"
+  },
+  {
+   "id": "r07",
+   "file": "shopapp/notifications.py",
+   "title": "Configure SMTP auth",
+   "replace": [
+    [
+     "SMTP_HOST = \"localhost\"\n",
+     "SMTP_HOST = \"localhost\"\nSMTP_PASSWORD = \"s3cr3t-Passw0rd-123\"\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "SMTP_PASSWORD",
+     "category": "security",
+     "type": "hardcoded_secret",
+     "severity": "high",
+     "explanation": "SMTP password committed to source.",
+     "reference_fix": "SMTP_PASSWORD = os.environ['SMTP_PASSWORD']"
+    }
+   ],
+   "split": "dev",
+   "origin": "synthetic"
+  },
+  {
+   "id": "r08",
+   "file": "shopapp/billing.py",
+   "title": "Tax refactor",
+   "replace": [
+    [
+     "    return amount_cents + amount_cents * rate // 100\n",
+     "    return amount_cents + amount_cents * rate\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "amount_cents * rate\n",
+     "category": "bug",
+     "type": "logic",
+     "severity": "high",
+     "explanation": "Tax computed as amount*rate instead of amount*rate/100.",
+     "reference_fix": "return amount_cents + amount_cents * rate // 100"
+    }
+   ],
+   "split": "dev",
+   "origin": "synthetic"
+  },
+  {
+   "id": "c01",
+   "file": "shopapp/billing.py",
+   "title": "Add money formatting helper",
+   "append": "\n\ndef format_cents(cents: int) -> str:\n    sign = \"-\" if cents < 0 else \"\"\n    cents = abs(cents)\n    return f\"{sign}{cents // 100}.{cents % 100:02d}\"\n",
+   "expected": [],
+   "split": "dev",
+   "origin": "synthetic"
+  },
+  {
+   "id": "c02",
+   "file": "shopapp/reports.py",
+   "title": "Document export",
+   "replace": [
+    [
+     "def export_csv(rows: list[dict]) -> str:\n",
+     "def export_csv(rows: list[dict]) -> str:\n    \"\"\"Serialize report rows as CSV with a header row.\"\"\"\n"
+    ]
+   ],
+   "expected": [],
+   "split": "dev",
+   "origin": "synthetic"
+  },
+  {
+   "id": "c03",
+   "file": "shopapp/orders.py",
+   "title": "Validate empty status",
+   "replace": [
+    [
+     "    if new_status not in VALID_TRANSITIONS.get(order[\"status\"], set()):\n",
+     "    if not new_status:\n        raise ValueError(\"new status is required\")\n    if new_status not in VALID_TRANSITIONS.get(order[\"status\"], set()):\n"
+    ]
+   ],
+   "expected": [],
+   "split": "dev",
+   "origin": "synthetic"
+  },
+  {
+   "id": "v01",
+   "split": "validation",
+   "origin": "synthetic",
+   "file": "shopapp/admin.py",
+   "title": "Search users by email",
+   "append": "\n\ndef find_users(db: Database, admin: dict, email_fragment: str) -> list[dict]:\n    require_role(admin, \"admin\")\n    return db.fetch_all(\"SELECT id, email FROM users WHERE email LIKE '%\" + email_fragment + \"%'\")\n",
+   "expected": [
+    {
+     "match": "email_fragment + \"%'\")",
+     "category": "security",
+     "type": "sql_injection",
+     "severity": "high",
+     "explanation": "User input concatenated into a LIKE query.",
+     "reference_fix": "db.fetch_all(\"SELECT id, email FROM users WHERE email LIKE %s\", (f\"%{fragment}%\",))"
+    }
+   ]
+  },
+  {
+   "id": "v02",
+   "split": "validation",
+   "origin": "synthetic",
+   "file": "shopapp/api.py",
+   "title": "Faster order endpoint",
+   "replace": [
+    [
+     "    order = get_order(db, user, int(request[\"params\"][\"order_id\"]))\n",
+     "    order = db.fetch_one(\"SELECT * FROM orders WHERE id = %s\", (int(request[\"params\"][\"order_id\"]),))\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "db.fetch_one(\"SELECT * FROM orders WHERE id = %s\"",
+     "category": "security",
+     "type": "idor",
+     "severity": "high",
+     "explanation": "Order loaded by id without the ownership check in get_order.",
+     "reference_fix": "order = get_order(db, user, order_id)"
+    }
+   ]
+  },
+  {
+   "id": "v03",
+   "split": "validation",
+   "origin": "synthetic",
+   "file": "shopapp/uploads.py",
+   "title": "Keep original upload folders",
+   "replace": [
+    [
+     "    name = os.path.basename(filename)\n",
+     "    name = filename\n"
+    ],
+    [
+     "    path = (UPLOAD_ROOT / name).resolve()\n    if UPLOAD_ROOT.resolve() not in path.parents:\n        raise ValueError(\"invalid file name\")\n    return path\n",
+     "    return UPLOAD_ROOT / name\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "    return UPLOAD_ROOT / name",
+     "category": "security",
+     "type": "path_traversal",
+     "severity": "high",
+     "explanation": "basename and the parent-directory check were removed; '../' escapes the upload root.",
+     "reference_fix": "Keep os.path.basename and the resolve()/parents check"
+    }
+   ]
+  },
+  {
+   "id": "v04",
+   "split": "validation",
+   "origin": "synthetic",
+   "file": "shopapp/reports.py",
+   "title": "Compress exported reports",
+   "replace": [
+    [
+     "import csv\n",
+     "import csv\nimport os\n"
+    ]
+   ],
+   "append": "\n\ndef compress_report(path: str) -> None:\n    os.system(\"gzip \" + path)\n",
+   "expected": [
+    {
+     "match": "os.system(\"gzip \" + path)",
+     "category": "security",
+     "type": "command_injection",
+     "severity": "high",
+     "explanation": "Path concatenated into a shell command.",
+     "reference_fix": "subprocess.run(['gzip', path], check=True)"
+    }
+   ]
+  },
+  {
+   "id": "v05",
+   "split": "validation",
+   "origin": "synthetic",
+   "file": "shopapp/api.py",
+   "title": "Partner authentication",
+   "replace": [
+    [
+     "ALLOWED_WEBHOOK_HOSTS = {\"hooks.partner.example\"}\n",
+     "ALLOWED_WEBHOOK_HOSTS = {\"hooks.partner.example\"}\nPARTNER_API_KEY = \"pk_live_51HxYz9QrT8aBcD\"\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "PARTNER_API_KEY",
+     "category": "security",
+     "type": "hardcoded_secret",
+     "severity": "high",
+     "explanation": "Live API key committed to source.",
+     "reference_fix": "PARTNER_API_KEY = os.environ['PARTNER_API_KEY']"
+    }
+   ]
+  },
+  {
+   "id": "v06",
+   "split": "validation",
+   "origin": "synthetic",
+   "file": "shopapp/admin.py",
+   "title": "Log role change requests",
+   "replace": [
+    [
+     "def set_user_role(db: Database, admin: dict, user_id: int, role: str) -> None:\n    require_role(admin, \"admin\")\n",
+     "def set_user_role(db: Database, admin: dict, user_id: int, role: str) -> None:\n    logger.debug(\"role change requested by %s\", admin.get(\"id\"))\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "logger.debug(\"role change requested by %s\"",
+     "category": "security",
+     "type": "authorization",
+     "severity": "critical",
+     "explanation": "require_role removed: any user can change roles (privilege escalation).",
+     "reference_fix": "require_role(admin, \"admin\")"
+    }
+   ]
+  },
+  {
+   "id": "v07",
+   "split": "validation",
+   "origin": "synthetic",
+   "file": "shopapp/inventory.py",
+   "title": "Simplify pagination",
+   "replace": [
+    [
+     "    start = (page - 1) * page_size\n",
+     "    start = page * page_size\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "    start = page * page_size",
+     "category": "bug",
+     "type": "logic",
+     "severity": "medium",
+     "explanation": "Page 1 now starts at page_size: the first page is skipped.",
+     "reference_fix": "start = (page - 1) * page_size"
+    }
+   ]
+  },
+  {
+   "id": "v08",
+   "split": "validation",
+   "origin": "synthetic",
+   "file": "shopapp/notifications.py",
+   "title": "Do not fail checkout on email errors",
+   "replace": [
+    [
+     "    except OSError:\n        logger.exception(\"email to %s failed\", to)\n        return False\n",
+     "    except Exception:\n        return True\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "    except Exception:",
+     "category": "bug",
+     "type": "error_handling",
+     "severity": "medium",
+     "explanation": "Every exception is swallowed and reported as a successful send.",
+     "reference_fix": "except OSError: logger.exception(...); return False"
+    }
+   ]
+  },
+  {
+   "id": "v09",
+   "split": "validation",
+   "origin": "synthetic",
+   "file": "shopapp/auth.py",
+   "title": "Simpler password check",
+   "replace": [
+    [
+     "    return hmac.compare_digest(hash_password(password, salt), expected)\n",
+     "    return hash_password(password, salt) == expected\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "return hash_password(password, salt) == expected",
+     "category": "security",
+     "type": "authentication",
+     "severity": "medium",
+     "explanation": "Non-constant-time comparison of password hashes (timing attack).",
+     "reference_fix": "return hmac.compare_digest(hash_password(password, salt), expected)"
+    }
+   ]
+  },
+  {
+   "id": "v10",
+   "split": "validation",
+   "origin": "synthetic",
+   "file": "shopapp/inventory.py",
+   "title": "Document get_stock",
+   "replace": [
+    [
+     "def get_stock(db: Database, product_id: int) -> int:\n",
+     "def get_stock(db: Database, product_id: int) -> int:\n    \"\"\"Units in stock for a product (0 if the product has no stock row).\"\"\"\n"
+    ]
+   ],
+   "expected": []
+  },
+  {
+   "id": "v11",
+   "split": "validation",
+   "origin": "synthetic",
+   "file": "shopapp/admin.py",
+   "title": "Add user count for admins",
+   "append": "\n\ndef count_users(db: Database, admin: dict) -> int:\n    require_role(admin, \"admin\")\n    row = db.fetch_one(\"SELECT count(*) AS n FROM users\")\n    return row[\"n\"]\n",
+   "expected": []
+  },
+  {
+   "id": "v12",
+   "split": "validation",
+   "origin": "synthetic",
+   "file": "shopapp/billing.py",
+   "title": "Support UK VAT",
+   "replace": [
+    [
+     "TAX_RATES = {\"IN\": 18, \"US\": 8, \"DE\": 19}\n",
+     "TAX_RATES = {\"IN\": 18, \"US\": 8, \"DE\": 19, \"GB\": 20}\n"
+    ]
+   ],
+   "expected": []
+  },
+  {
+   "id": "h01",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/orders.py",
+   "title": "Inline status update",
+   "replace": [
+    [
+     "    db.execute(\"UPDATE orders SET status = %s WHERE id = %s\", (new_status, order[\"id\"]))\n",
+     "    db.execute(f\"UPDATE orders SET status = '{new_status}' WHERE id = {order['id']}\")\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "UPDATE orders SET status = '{new_status}'",
+     "category": "security",
+     "type": "sql_injection",
+     "severity": "high",
+     "explanation": "Status and id formatted into SQL with an f-string.",
+     "reference_fix": "db.execute(\"UPDATE orders SET status = %s WHERE id = %s\", (new_status, order[\"id\"]))"
+    }
+   ]
+  },
+  {
+   "id": "h02",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/reports.py",
+   "title": "Sales for a period",
+   "append": "\n\ndef sales_for_period(db: Database, admin: dict, start: str, end: str) -> list[dict]:\n    require_role(admin, \"admin\")\n    return db.fetch_all(\"SELECT * FROM orders WHERE created_at BETWEEN '%s' AND '%s'\" % (start, end))\n",
+   "expected": [
+    {
+     "match": "BETWEEN '%s' AND '%s'\" % (start, end)",
+     "category": "security",
+     "type": "sql_injection",
+     "severity": "high",
+     "explanation": "Dates %-formatted into SQL text.",
+     "reference_fix": "db.fetch_all(\"... BETWEEN %s AND %s\", (start, end))"
+    }
+   ]
+  },
+  {
+   "id": "h03",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/orders.py",
+   "title": "Invoice lookup",
+   "append": "\n\ndef get_invoice(db: Database, user: dict, invoice_id: int) -> dict:\n    return db.fetch_one(\"SELECT * FROM invoices WHERE id = %s\", (invoice_id,))\n",
+   "expected": [
+    {
+     "match": "SELECT * FROM invoices WHERE id = %s",
+     "category": "security",
+     "type": "idor",
+     "severity": "high",
+     "explanation": "The user argument is ignored: any user can read any invoice.",
+     "reference_fix": "Filter by owner: WHERE id = %s AND user_id = %s"
+    }
+   ]
+  },
+  {
+   "id": "h04",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/api.py",
+   "title": "Allow email updates",
+   "append": "\n\ndef handle_update_email(db: Database, request: dict) -> dict:\n    user = current_user(db, request)\n    target_id = int(request[\"params\"][\"user_id\"])\n    db.execute(\"UPDATE users SET email = %s WHERE id = %s\", (request[\"body\"], target_id))\n    return {\"status\": 204}\n",
+   "expected": [
+    {
+     "match": "UPDATE users SET email = %s WHERE id = %s\", (request[\"body\"], target_id)",
+     "category": "security",
+     "type": "idor",
+     "severity": "high",
+     "explanation": "Logged-in user can change any user's email via user_id.",
+     "reference_fix": "Use user['id'] or require admin"
+    }
+   ]
+  },
+  {
+   "id": "h05",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/reports.py",
+   "title": "Read saved report",
+   "append": "\n\ndef read_report(name: str) -> str:\n    with open(\"/var/shopapp/reports/\" + name) as handle:\n        return handle.read()\n",
+   "expected": [
+    {
+     "match": "open(\"/var/shopapp/reports/\" + name)",
+     "category": "security",
+     "type": "path_traversal",
+     "severity": "high",
+     "explanation": "Unvalidated name joined to a directory path ('../').",
+     "reference_fix": "Use os.path.basename and check the resolved path stays in the reports dir"
+    }
+   ]
+  },
+  {
+   "id": "h06",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/uploads.py",
+   "title": "Normalize upload paths",
+   "replace": [
+    [
+     "    path = safe_upload_path(filename)\n",
+     "    path = UPLOAD_ROOT / os.path.normpath(filename)\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "UPLOAD_ROOT / os.path.normpath(filename)",
+     "category": "security",
+     "type": "path_traversal",
+     "severity": "high",
+     "explanation": "normpath keeps '../' segments; safe_upload_path is bypassed.",
+     "reference_fix": "path = safe_upload_path(filename)"
+    }
+   ]
+  },
+  {
+   "id": "h07",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/notifications.py",
+   "title": "Mail host health check",
+   "replace": [
+    [
+     "import smtplib\n",
+     "import smtplib\nimport subprocess\n"
+    ]
+   ],
+   "append": "\n\ndef check_mail_host(host: str) -> bool:\n    return subprocess.call(f\"ping -c 1 {host}\", shell=True) == 0\n",
+   "expected": [
+    {
+     "match": "ping -c 1 {host}",
+     "category": "security",
+     "type": "command_injection",
+     "severity": "high",
+     "explanation": "Host interpolated into a shell command with shell=True.",
+     "reference_fix": "subprocess.call(['ping', '-c', '1', host])"
+    }
+   ]
+  },
+  {
+   "id": "h08",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/uploads.py",
+   "title": "Image thumbnails",
+   "replace": [
+    [
+     "import os\n",
+     "import os\nimport subprocess\n"
+    ]
+   ],
+   "append": "\n\ndef make_thumbnail(path: str, size: str) -> None:\n    subprocess.run([\"sh\", \"-c\", f\"convert {path} -resize {size} {path}.thumb.png\"], check=True)\n",
+   "expected": [
+    {
+     "match": "convert {path} -resize {size}",
+     "category": "security",
+     "type": "command_injection",
+     "severity": "high",
+     "explanation": "sh -c with interpolated values is command injection even without shell=True.",
+     "reference_fix": "subprocess.run(['convert', str(path), '-resize', size, f'{path}.thumb.png'], check=True)"
+    }
+   ]
+  },
+  {
+   "id": "h09",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/auth.py",
+   "title": "Signed tokens",
+   "replace": [
+    [
+     "SESSION_TTL_SECONDS = 3600\n",
+     "SESSION_TTL_SECONDS = 3600\nJWT_SIGNING_SECRET = \"s3cr3t-signing-key-2026\"\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "JWT_SIGNING_SECRET",
+     "category": "security",
+     "type": "hardcoded_secret",
+     "severity": "high",
+     "explanation": "Signing secret committed to source.",
+     "reference_fix": "JWT_SIGNING_SECRET = os.environ['JWT_SIGNING_SECRET']"
+    }
+   ]
+  },
+  {
+   "id": "h10",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/storage.py",
+   "title": "Default database connection",
+   "replace": [
+    [
+     "\"\"\"Thin database wrapper. Always use parameterized queries.\"\"\"\n",
+     "\"\"\"Thin database wrapper. Always use parameterized queries.\"\"\"\n\nDEFAULT_DSN = \"postgresql://shop:Sup3rS3cret@db.internal:5432/shop\"\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "Sup3rS3cret@db.internal",
+     "category": "security",
+     "type": "hardcoded_secret",
+     "severity": "high",
+     "explanation": "Database password embedded in a DSN constant.",
+     "reference_fix": "DEFAULT_DSN = os.environ['DATABASE_URL']"
+    }
+   ]
+  },
+  {
+   "id": "h11",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/auth.py",
+   "title": "Guest sessions",
+   "replace": [
+    [
+     "    if row is None:\n        return None\n",
+     "    if row is None:\n        return {\"id\": 0, \"email\": \"guest@example.com\", \"role\": \"admin\"}\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "return {\"id\": 0, \"email\": \"guest@example.com\", \"role\": \"admin\"}",
+     "category": "security",
+     "type": "authentication",
+     "severity": "critical",
+     "explanation": "Unknown/invalid session tokens now authenticate as an admin.",
+     "reference_fix": "return None"
+    }
+   ]
+  },
+  {
+   "id": "h12",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/orders.py",
+   "title": "Self-service refunds",
+   "replace": [
+    [
+     "    require_role(admin, \"support\")\n",
+     "    require_role(admin, \"customer\")\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "require_role(admin, \"customer\")",
+     "category": "security",
+     "type": "authorization",
+     "severity": "high",
+     "explanation": "Refunds now only need the customer role (any user can refund).",
+     "reference_fix": "require_role(admin, \"support\")"
+    }
+   ]
+  },
+  {
+   "id": "h13",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/reports.py",
+   "title": "Reports for logged-in users",
+   "replace": [
+    [
+     "def sales_by_country(db: Database, admin: dict) -> list[dict]:\n    require_role(admin, \"admin\")\n",
+     "def sales_by_country(db: Database, admin: dict) -> list[dict]:\n    if admin is None:\n        raise PermissionError(\"login required\")\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "    if admin is None:",
+     "category": "security",
+     "type": "authorization",
+     "severity": "medium",
+     "explanation": "Role check replaced by a login check: any user can read sales data.",
+     "reference_fix": "require_role(admin, \"admin\")"
+    }
+   ]
+  },
+  {
+   "id": "h14",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/api.py",
+   "title": "Binary settings import",
+   "replace": [
+    [
+     "import json\n",
+     "import json\nimport pickle\n"
+    ],
+    [
+     "    settings = json.loads(request[\"body\"])\n",
+     "    settings = pickle.loads(request[\"body\"])\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "pickle.loads(request[\"body\"])",
+     "category": "security",
+     "type": "deserialization",
+     "severity": "critical",
+     "explanation": "Unpickling request data executes arbitrary code.",
+     "reference_fix": "json.loads(request['body'])"
+    }
+   ]
+  },
+  {
+   "id": "h15",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/api.py",
+   "title": "Support all partner hosts",
+   "replace": [
+    [
+     "    host = urlparse(url).hostname\n    if host not in ALLOWED_WEBHOOK_HOSTS:\n        raise ValueError(\"webhook host not allowed\")\n",
+     "    url = url.strip()\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "    url = url.strip()",
+     "category": "security",
+     "type": "ssrf",
+     "severity": "high",
+     "explanation": "Host allow-list removed: the server fetches arbitrary URLs (SSRF).",
+     "reference_fix": "Keep the ALLOWED_WEBHOOK_HOSTS check"
+    }
+   ]
+  },
+  {
+   "id": "h16",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/auth.py",
+   "title": "Faster password hashing",
+   "replace": [
+    [
+     "    return hashlib.pbkdf2_hmac(\"sha256\", password.encode(), salt, 200_000)\n",
+     "    return hashlib.md5(salt + password.encode()).digest()\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "hashlib.md5(salt + password.encode())",
+     "category": "security",
+     "type": "weak_crypto",
+     "severity": "high",
+     "explanation": "Single unsalted-style MD5 is unsuitable for password storage.",
+     "reference_fix": "hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 200_000)"
+    }
+   ]
+  },
+  {
+   "id": "h17",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/billing.py",
+   "title": "Coupon check cleanup",
+   "replace": [
+    [
+     "    if not coupon_code:\n",
+     "    if coupon_code:\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "    if coupon_code:",
+     "category": "bug",
+     "type": "logic",
+     "severity": "high",
+     "explanation": "Condition inverted: valid coupons now return 0, missing coupon crashes on .upper().",
+     "reference_fix": "if not coupon_code: return 0"
+    }
+   ]
+  },
+  {
+   "id": "h18",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/inventory.py",
+   "title": "Allow small backorders",
+   "replace": [
+    [
+     "        if item[\"quantity\"] > available:\n",
+     "        if item[\"quantity\"] > available + 1:\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "available + 1",
+     "category": "bug",
+     "type": "logic",
+     "severity": "medium",
+     "explanation": "Off-by-one: allows reserving one more than in stock (negative stock).",
+     "reference_fix": "if item['quantity'] > available:"
+    }
+   ]
+  },
+  {
+   "id": "h19",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/orders.py",
+   "title": "Allow draft orders",
+   "replace": [
+    [
+     "    if not items:\n",
+     "    if items is None:\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "    if items is None:",
+     "category": "bug",
+     "type": "logic",
+     "severity": "medium",
+     "explanation": "Empty item lists are now accepted, creating zero-value orders.",
+     "reference_fix": "if not items: raise ValueError(...)"
+    }
+   ]
+  },
+  {
+   "id": "h20",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/reports.py",
+   "title": "Always write CSV header",
+   "replace": [
+    [
+     "    if rows:\n        writer = csv.DictWriter(buffer, fieldnames=list(rows[0]))\n        writer.writeheader()\n        writer.writerows(rows)\n",
+     "    writer = csv.DictWriter(buffer, fieldnames=list(rows[0]))\n    writer.writeheader()\n    writer.writerows(rows)\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "    writer = csv.DictWriter(buffer, fieldnames=list(rows[0]))",
+     "category": "bug",
+     "type": "error_handling",
+     "severity": "medium",
+     "explanation": "rows[0] raises IndexError for an empty report.",
+     "reference_fix": "Keep the 'if rows:' guard"
+    }
+   ]
+  },
+  {
+   "id": "h21",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/inventory.py",
+   "title": "Simplify stock lookup",
+   "replace": [
+    [
+     "    return row[\"quantity\"] if row else 0\n",
+     "    return row[\"quantity\"]\n"
+    ]
+   ],
+   "expected": [
+    {
+     "match": "    return row[\"quantity\"]",
+     "category": "bug",
+     "type": "error_handling",
+     "severity": "medium",
+     "explanation": "Products without a stock row now raise TypeError (row is None).",
+     "reference_fix": "return row['quantity'] if row else 0"
+    }
+   ]
+  },
+  {
+   "id": "h22",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/billing.py",
+   "title": "Rupee conversion helper",
+   "append": "\n\ndef cents_to_rupees(cents: int) -> float:\n    return cents / 100\n",
+   "expected": []
+  },
+  {
+   "id": "h23",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/orders.py",
+   "title": "Order page size constant",
+   "replace": [
+    [
+     "VALID_TRANSITIONS = {",
+     "ORDER_PAGE_SIZE = 25\nVALID_TRANSITIONS = {"
+    ]
+   ],
+   "expected": []
+  },
+  {
+   "id": "h24",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/notifications.py",
+   "title": "Debug log for sent emails",
+   "replace": [
+    [
+     "            smtp.sendmail(\"shop@example.com\", [to], message)\n",
+     "            smtp.sendmail(\"shop@example.com\", [to], message)\n        logger.debug(\"email sent\")\n"
+    ]
+   ],
+   "expected": []
+  },
+  {
+   "id": "h25",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/inventory.py",
+   "title": "Document reservations",
+   "replace": [
+    [
+     "def reserve_items(db: Database, items: list[dict]) -> None:\n",
+     "def reserve_items(db: Database, items: list[dict]) -> None:\n    \"\"\"Check every item first, then decrement stock (all-or-nothing validation).\"\"\"\n"
+    ]
+   ],
+   "expected": []
+  },
+  {
+   "id": "h26",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/admin.py",
+   "title": "Sort users by email",
+   "replace": [
+    [
+     "ORDER BY id\")",
+     "ORDER BY email\")"
+    ]
+   ],
+   "expected": []
+  },
+  {
+   "id": "h27",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/auth.py",
+   "title": "Shorter sessions",
+   "replace": [
+    [
+     "SESSION_TTL_SECONDS = 3600\n",
+     "SESSION_TTL_SECONDS = 1800\n"
+    ]
+   ],
+   "expected": []
+  },
+  {
+   "id": "h28",
+   "split": "holdout",
+   "origin": "synthetic",
+   "file": "shopapp/storage.py",
+   "title": "Document fetch_all",
+   "replace": [
+    [
+     "    def fetch_all(self, sql: str, params: tuple = ()) -> list[dict]:\n",
+     "    def fetch_all(self, sql: str, params: tuple = ()) -> list[dict]:\n        \"\"\"Run a parameterized query and return every row as a dict.\"\"\"\n"
+    ]
+   ],
+   "expected": []
+  }
+ ]
 }

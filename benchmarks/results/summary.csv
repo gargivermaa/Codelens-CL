@@ -1,0 +1,5 @@
+run_id,benchmark,config,split,n,repeats,precision,recall,f1,clean_fp_rate,category_accuracy,line_exact,model,prompt_version,dataset_version,api_failures
+review-rules-holdout-20261118T130132Z-279c78,review,rules,holdout,28,1,1.0,0.2381,0.3846,0.0,1.0,1.0,,5a9b3b443111,68f11f6c4304,0
+retrieval-20261118T130134Z-ca23ac,retrieval,bm25,holdout,15,0.9333,0.28,0.9333,0.9156,0.9667,"{""rrf_k"": 60, ""weights_dense_bm25"": [1.0, 1.0], ""candidate_k"": null}",0701a186a773
+review-rules-holdout-20261118T130135Z-d98f07,review,rules,holdout,28,1,1.0,0.2381,0.3846,0.0,1.0,1.0,,5a9b3b443111,68f11f6c4304,0
+review-rules-holdout-20261118T130143Z-4523b3,review,rules,holdout,28,1,1.0,0.2381,0.3846,0.0,1.0,1.0,,5a9b3b443111,68f11f6c4304,0

@@ -17,6 +17,7 @@ from google.genai import types
 from pydantic import BaseModel, ValidationError
 
 from app.config import settings
+from app.core.embedder import _per_minute_retry_delay
 
 logger = logging.getLogger("codelens.llm")
 
@@ -49,6 +50,10 @@ class LLMResult:
     attempts: int
 
 
+# Recorded with every benchmark run (reproducibility).
+GENERATION_CONFIG = {"temperature": 0.1, "max_output_tokens": 8192, "response_mime_type": "application/json"}
+
+
 class GeminiReviewLLM:
     def __init__(self, client=None, model: str | None = None, max_output_tokens: int = 8192):
         self.model = model or settings.GEMINI_REVIEW_MODEL
@@ -67,7 +72,8 @@ class GeminiReviewLLM:
                     timeout=120_000,
                     retry_options=types.HttpRetryOptions(
                         attempts=settings.GEMINI_MAX_ATTEMPTS, initial_delay=2.0, max_delay=60.0,
-                        http_status_codes=[408, 429, 500, 502, 503, 504]),
+                        # 429 handled in generate(): wait the delay the API asks for.
+                        http_status_codes=[408, 500, 502, 503, 504]),
                 ),
             )
         return self._client
@@ -85,31 +91,33 @@ class GeminiReviewLLM:
         contents = prompt
         last_problem = "no response"
 
+        self.last_raw_outputs: list[str] = []
+        rate_limit_waits = 0
         for attempt in (1, 2):
-            self._throttle()
-            try:
-                response = self.client.models.generate_content(
-                    model=self.model,
-                    contents=contents,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system,
-                        temperature=0.1,
-                        max_output_tokens=self.max_output_tokens,
-                        response_mime_type="application/json",
-                        response_schema=schema,
-                    ),
-                )
-            except genai_errors.APIError as exc:
-                code = getattr(exc, "code", None)
-                if code == 429 or "RESOURCE_EXHAUSTED" in str(getattr(exc, "status", "")):
-                    raise LLMQuotaError(f"Gemini free-tier quota/rate limit exhausted for {self.model}; "
-                                        f"retry later. Details: {exc}") from exc
-                if code == 404:
-                    raise LLMConfigurationError(
-                        f"Review model {self.model!r} is not available to this API key. Set "
-                        f"GEMINI_REVIEW_MODEL in .env to a model that is free of charge on the "
-                        f"free tier (python -m app.cli models lists available ones). Details: {exc}") from exc
-                raise LLMError(f"Gemini request failed: {exc}") from exc
+            while True:
+                self._throttle()
+                try:
+                    response = self.client.models.generate_content(
+                        model=self.model,
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system,
+                            temperature=GENERATION_CONFIG["temperature"],
+                            max_output_tokens=self.max_output_tokens,
+                            response_mime_type="application/json",
+                            response_schema=schema,
+                        ),
+                    )
+                    break
+                except genai_errors.APIError as exc:
+                    delay = _per_minute_retry_delay(exc)
+                    if delay is None or rate_limit_waits >= settings.GEMINI_RATE_LIMIT_RETRIES:
+                        _raise_api_error(exc, self.model)
+                    rate_limit_waits += 1
+                    logger.warning("Gemini per-minute rate limit for %s; waiting %.0fs (retry %d/%d)",
+                                   self.model, delay, rate_limit_waits, settings.GEMINI_RATE_LIMIT_RETRIES)
+                    time.sleep(delay)
+
 
             usage = getattr(response, "usage_metadata", None)
             prompt_tokens = getattr(usage, "prompt_token_count", None)
@@ -121,6 +129,7 @@ class GeminiReviewLLM:
                 output_tokens += int(output or 0)
 
             text = _response_text(response)
+            self.last_raw_outputs.append(text)
             if not text:
                 last_problem = _empty_reason(response)
             else:
@@ -152,3 +161,16 @@ def _empty_reason(response) -> str:
     if candidates and getattr(candidates[0], "finish_reason", None):
         return f"empty output (finish_reason={candidates[0].finish_reason})"
     return "empty output"
+
+
+def _raise_api_error(exc, model: str):
+    code = getattr(exc, "code", None)
+    if code == 429 or "RESOURCE_EXHAUSTED" in str(getattr(exc, "status", "")):
+        raise LLMQuotaError(f"Gemini free-tier quota/rate limit exhausted for {model}; "
+                            f"retry later. Details: {exc}") from exc
+    if code == 404:
+        raise LLMConfigurationError(
+            f"Review model {model!r} is not available to this API key. Set "
+            f"GEMINI_REVIEW_MODEL in .env to a model that is free of charge on the "
+            f"free tier (python -m app.cli models lists available ones). Details: {exc}") from exc
+    raise LLMError(f"Gemini request failed: {exc}") from exc

@@ -312,7 +312,8 @@ class ReviewPipeline:
                for item in result.data.findings]
         call = {"focus": focus, "ok": True, "model": result.model, "input_tokens": result.input_tokens,
                 "output_tokens": result.output_tokens, "latency_ms": result.latency_ms,
-                "attempts": result.attempts, "findings": len(raw)}
+                "attempts": result.attempts, "findings": len(raw),
+                "raw_output": list(getattr(self.llm, "last_raw_outputs", []))}
         return {"raw_findings": raw, "llm_calls": [call]}
 
     def detect_bugs(self, state: ReviewState) -> dict:
