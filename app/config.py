@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     REVIEW_MAX_PATCH_LINES: int = 2000    # larger diffs are reviewed partially (reported)
     REVIEW_MAX_INLINE_COMMENTS: int = 15
 
+    # --- Dashboard protection for public demos (HTTP Basic auth; empty = off) ---
+    DASHBOARD_USER: str = "codelens"
+    DASHBOARD_PASSWORD: str = ""
+
     # --- LangSmith tracing (optional, free developer tier) ---
     LANGSMITH_TRACING: bool = False
     LANGSMITH_API_KEY: str = ""

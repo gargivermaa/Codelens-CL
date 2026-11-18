@@ -79,3 +79,20 @@ def test_review_actions(monkeypatch, action, queued):
 
 def test_unknown_review_returns_404():
     assert TestClient(app).get("/reviews/999999999").status_code == 404
+
+
+def test_dashboard_password_protects_everything_but_webhook_and_health(monkeypatch):
+    import base64
+    monkeypatch.setattr(settings, "DASHBOARD_PASSWORD", "s3cret")
+    client = TestClient(app)
+    assert client.get("/api/info").status_code == 401
+    assert client.get("/health").status_code == 200
+    assert _post(client, {"zen": "x"}, event="ping").status_code == 200            # signed webhook still works
+    good = base64.b64encode(b"codelens:s3cret").decode()
+    bad = base64.b64encode(b"codelens:wrong").decode()
+    assert client.get("/api/info", headers={"Authorization": f"Basic {bad}"}).status_code == 401
+    assert client.get("/api/info", headers={"Authorization": f"Basic {good}"}).status_code == 200
+
+
+def test_dashboard_is_open_when_no_password_is_set():
+    assert TestClient(app).get("/api/info").status_code == 200
