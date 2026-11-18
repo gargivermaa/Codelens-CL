@@ -118,7 +118,7 @@ def collection_name(repo_github_id: int) -> str:
 
 def _point_id(chunk: CodeChunk) -> str:
     key = f"{chunk.file}:{chunk.type}:{chunk.qualified_name}:{chunk.start_line}"
-    if chunk.part_count > 1:
+    if chunk.is_split:
         # Unsplit chunks keep their Day 8 ids; parts get a unique, stable suffix.
         key += f"#part{chunk.part}"
     return str(uuid.uuid5(_POINT_ID_NAMESPACE, key))

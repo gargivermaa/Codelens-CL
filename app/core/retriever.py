@@ -178,7 +178,7 @@ class HybridRetriever:
         results: list[RetrievedChunk] = []
         seen_units: set[tuple] = set()
         for chunk in ranked:
-            if collapse_parts and chunk.payload.get("part_count", 1) > 1:
+            if collapse_parts and chunk.payload.get("split"):
                 key = _unit_key(chunk.payload)
                 if key in seen_units:
                     continue

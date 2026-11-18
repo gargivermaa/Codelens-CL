@@ -128,6 +128,15 @@ def test_oversized_class_splits_only_its_own_lines_and_keeps_methods(monkeypatch
     text = "\n".join(p.text for p in class_parts)
     assert "LIMIT = 10" in text and "TAIL = 'after methods'" in text
     assert "return 1" not in text and "return 2" not in text   # methods are not duplicated
+    assert all(c.is_split for c in class_parts)
+
+
+def test_large_class_made_only_of_methods_yields_a_marked_header_part(monkeypatch):
+    monkeypatch.setattr(chunker, "MAX_EMBED_BYTES", 80)
+    src = (b"class OnlyMethods:\n    def a(self):\n        return 'aaaaaaaaaaaa'\n\n"
+           b"    def b(self):\n        return 'bbbbbbbbbbbbbbbb'\n")
+    [header] = [c for c in chunk_source(src, "m.py") if c.type == "class"]
+    assert header.text == "class OnlyMethods:" and header.is_split and header.to_dict()["split"]
 
 
 def test_single_overlong_line_is_cut_into_byte_windows_losing_nothing(monkeypatch):

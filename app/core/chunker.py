@@ -103,11 +103,14 @@ class CodeChunk:
     start_line: int      # 1-based, inclusive (includes decorators)
     end_line: int        # 1-based, inclusive
     part: int = 1        # 1-based part number when a unit was split
-    part_count: int = 1  # 1 == the whole unit fits in one chunk
+    part_count: int = 1  # number of parts the unit was split into
+    # True for every part of a split unit, including the single "own lines"
+    # part of a large class whose body is all methods (part_count can be 1).
+    split: bool = False
 
     @property
     def is_split(self) -> bool:
-        return self.part_count > 1
+        return self.split or self.part_count > 1
 
     @property
     def embed_text(self) -> str:
@@ -128,7 +131,7 @@ class CodeChunk:
         data = asdict(self)
         if not self.is_split:
             # Keep the payload of unsplit chunks identical to the Day 8 format.
-            del data["part"], data["part_count"]
+            del data["part"], data["part_count"], data["split"]
         return data
 
 
@@ -254,7 +257,7 @@ def _split_unit(unit: Node, definition: Node, source_lines: list[str], is_class:
     total = len(raw_parts)
     return [
         CodeChunk(text=text, file=file_path, name=name, qualified_name=qualified, type=kind,
-                  start_line=start + 1, end_line=end + 1, part=index, part_count=total)
+                  start_line=start + 1, end_line=end + 1, part=index, part_count=total, split=True)
         for index, (start, end, text) in enumerate(raw_parts, start=1)
     ]
 

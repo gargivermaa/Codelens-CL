@@ -1,19 +1,19 @@
-"""FastAPI entrypoint. Routers are added here as new app/api/*.py files are built
-on their locked days (reviews.py on Day 17-18, etc.) — this file's structure
-does not change, only the include_router list grows.
-"""
-import logging
-
+"""FastAPI entrypoint. Routes stay thin: webhook verification + enqueue, and
+read-only access to stored reviews. All heavy work runs in the Celery worker."""
 from fastapi import FastAPI
 
-from app.api import health, webhook
+from app.api import health, reviews, webhook
+from app.logging_config import configure_logging
 
-logging.basicConfig(level=logging.INFO)
+configure_logging()
 
-app = FastAPI(title="CodeLens CI", version="0.1.0")
+app = FastAPI(title="CodeLens CI", version="1.0.0",
+              description="Repository-aware AI code review for GitHub pull requests.")
 
 app.include_router(health.router)
 app.include_router(webhook.router)
+app.include_router(reviews.router)
+
 
 @app.get("/")
 async def root():
