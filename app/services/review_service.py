@@ -243,7 +243,10 @@ def post_review(db: Session, review: Review, repo_full_name: str, pr_number: int
 # ---------------------------------------------------------------- orchestration
 
 def run_review(db: Session, deps: ReviewDeps, repo_github_id: int, repo_full_name: str, pr_number: int,
-               installation_id: int | None = None, post: bool | None = None) -> dict:
+               installation_id: int | None = None, post: bool | None = None,
+               allow_closed: bool = False) -> dict:
+    """Review one PR commit. allow_closed=True (CLI only) also reviews closed/merged
+    PRs, which is how real historical PRs are evaluated; webhooks never set it."""
     started = time.perf_counter()
     post = settings.GITHUB_POST_REVIEWS if post is None else post
 
@@ -254,7 +257,7 @@ def run_review(db: Session, deps: ReviewDeps, repo_github_id: int, repo_full_nam
         db, repo_github_id, repo_full_name, pr_number, installation_id, pull.get("title"),
         (pull.get("user") or {}).get("login"), head_sha,
         default_branch=base_repo.get("default_branch"), private=base_repo.get("private"))
-    if pull.get("state") != "open":
+    if pull.get("state") != "open" and not allow_closed:
         db.query(PullRequest).filter_by(id=pr_id).update({"status": "completed"})
         db.commit()
         return {"status": "skipped", "reason": f"PR is {pull.get('state')}", "pr_id": pr_id}

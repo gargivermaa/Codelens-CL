@@ -60,7 +60,8 @@ def _cmd_review(args):
     db = SessionLocal()
     try:
         result = run_review(db, deps, int(repo["id"]), args.repo, args.pr,
-                            installation_id=args.installation_id, post=not args.no_post)
+                            installation_id=args.installation_id, post=not args.no_post,
+                            allow_closed=args.any_state)
     finally:
         db.close()
     print(json.dumps(result, indent=2, default=str))
@@ -104,6 +105,8 @@ def main() -> None:
     p.add_argument("pr", type=int)
     p.add_argument("--installation-id", type=int)
     p.add_argument("--no-post", action="store_true", help="store the review but do not post it")
+    p.add_argument("--any-state", action="store_true",
+                   help="also review closed/merged PRs (real-world evaluation; use with --no-post)")
     p.set_defaults(func=_cmd_review)
 
     p = sub.add_parser("models", help="list Gemini models available to your API key")

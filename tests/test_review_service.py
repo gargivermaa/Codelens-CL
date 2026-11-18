@@ -170,6 +170,11 @@ def test_closed_pull_request_is_skipped(db):
     assert db.query(Review).count() == 0
 
 
+def test_merged_pull_request_can_be_reviewed_explicitly_for_evaluation(db):
+    result = run_review(db, _deps(FakeGitHub(state="closed")), REPO_ID, "o/r", 7, post=False, allow_closed=True)
+    assert result["status"] == "completed" and result["issues_found"] == 2
+
+
 def test_unexpected_failure_marks_review_failed_and_redelivery_can_retry(db):
     github = FakeGitHub()
     github.list_pull_files = lambda repo, number: (_ for _ in ()).throw(ValueError("boom"))
