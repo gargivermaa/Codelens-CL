@@ -18,6 +18,10 @@ from app.config import settings
 logger = logging.getLogger("codelens.webhook")
 router = APIRouter()
 
+# PR events that mean "there is new code to review". Duplicate deliveries of
+# the same commit are harmless: the worker reviews each (PR, head sha) once.
+REVIEW_ACTIONS = ("opened", "synchronize", "reopened", "ready_for_review")
+
 
 def verify_github_signature(payload: bytes, signature: str | None) -> bool:
     """GitHub signs every webhook with HMAC-SHA256 using the shared secret.
@@ -52,7 +56,7 @@ async def github_webhook(
 
     action = payload.get("action")
 
-    if x_github_event == "pull_request" and action in ("opened", "synchronize"):
+    if x_github_event == "pull_request" and action in REVIEW_ACTIONS:
         pr = payload["pull_request"]
         pr_number = pr["number"]
         repo_name = payload["repository"]["full_name"]
@@ -67,7 +71,6 @@ async def github_webhook(
                 pr_number=pr_number,
                 installation_id=payload.get("installation", {}).get("id"),
                 title=pr.get("title"),
-                
                 author=(pr.get("user") or {}).get("login"),
             )
         except BrokerUnavailableError:
@@ -77,6 +80,28 @@ async def github_webhook(
             raise HTTPException(status_code=503, detail="Task queue unavailable")
 
         return {"status": "queued", "repo": repo_name, "pr": pr_number, "action": action}
+
+    if x_github_event == "ping":
+        return {"status": "pong", "zen": payload.get("zen")}
+
+    # GitHub App installed on (or given access to) repositories: register them
+    # so they appear in the dashboard before their first PR.
+    added = None
+    if x_github_event == "installation" and action in ("created", "new_permissions_accepted"):
+        added = payload.get("repositories") or []
+    elif x_github_event == "installation_repositories" and action == "added":
+        added = payload.get("repositories_added") or []
+    if added is not None:
+        installation_id = (payload.get("installation") or {}).get("id")
+        repos = [{"id": r["id"], "full_name": r["full_name"], "private": r.get("private")} for r in added]
+        from app.tasks.review_task import register_repositories
+        try:
+            register_repositories.delay(installation_id=installation_id, repositories=repos)
+        except BrokerUnavailableError:
+            logger.exception("Queue unavailable for installation %s", installation_id)
+            raise HTTPException(status_code=503, detail="Task queue unavailable")
+        logger.info("Queued registration of %d repositories (installation %s)", len(repos), installation_id)
+        return {"status": "queued", "event": x_github_event, "repositories": len(repos)}
 
     logger.info("Ignored event: type=%s action=%s", x_github_event, action)
     return {"status": "ignored", "event": x_github_event, "action": action}

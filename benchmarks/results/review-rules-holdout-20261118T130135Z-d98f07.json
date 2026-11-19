@@ -1,0 +1,1627 @@
+{
+  "benchmark": "review",
+  "measured": true,
+  "run_id": "review-rules-holdout-20261118T130135Z-d98f07",
+  "mode": "rules",
+  "config": "rules",
+  "split": "holdout",
+  "repeats": 1,
+  "dataset_version": "68f11f6c4304",
+  "dataset_schema": "2.0",
+  "environment": {
+    "timestamp": "2026-11-18T13:01:35.502624+00:00",
+    "python": "3.13.18",
+    "embedding_model": "gemini-embedding-001",
+    "dimensions": 1536,
+    "query_task_type": "CODE_RETRIEVAL_QUERY",
+    "review_model": null,
+    "generation_config": {
+      "temperature": 0.1,
+      "max_output_tokens": 8192,
+      "response_mime_type": "application/json"
+    },
+    "prompt_version": "5a9b3b443111",
+    "retrieval": {
+      "top_k": 5,
+      "rrf_k": 60
+    }
+  },
+  "n_cases": 28,
+  "cases": [
+    {
+      "id": "h01",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/orders.py",
+          "line": 30,
+          "category": "security",
+          "type": "sql_injection",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/orders.py",
+          "start_line": 30,
+          "end_line": 30,
+          "category": "security",
+          "severity": "high",
+          "status": "confirmed",
+          "confidence": 0.8,
+          "title": "SQL query built with string formatting",
+          "source": "rule:SEC008"
+        }
+      ],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 6.8,
+      "risk": "high"
+    },
+    {
+      "id": "h02",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/reports.py",
+          "line": 25,
+          "category": "security",
+          "type": "sql_injection",
+          "severity": "high"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.7,
+      "risk": "low"
+    },
+    {
+      "id": "h03",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/orders.py",
+          "line": 40,
+          "category": "security",
+          "type": "idor",
+          "severity": "high"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.4,
+      "risk": "low"
+    },
+    {
+      "id": "h04",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/api.py",
+          "line": 43,
+          "category": "security",
+          "type": "idor",
+          "severity": "high"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.5,
+      "risk": "low"
+    },
+    {
+      "id": "h05",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/reports.py",
+          "line": 24,
+          "category": "security",
+          "type": "path_traversal",
+          "severity": "high"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.6,
+      "risk": "low"
+    },
+    {
+      "id": "h06",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/uploads.py",
+          "line": 23,
+          "category": "security",
+          "type": "path_traversal",
+          "severity": "high"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.4,
+      "risk": "low"
+    },
+    {
+      "id": "h07",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/notifications.py",
+          "line": 29,
+          "category": "security",
+          "type": "command_injection",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/notifications.py",
+          "start_line": 29,
+          "end_line": 29,
+          "category": "security",
+          "severity": "high",
+          "status": "confirmed",
+          "confidence": 0.8,
+          "title": "Subprocess call with shell=True",
+          "source": "rule:SEC002"
+        }
+      ],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.5,
+      "risk": "high"
+    },
+    {
+      "id": "h08",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/uploads.py",
+          "line": 30,
+          "category": "security",
+          "type": "command_injection",
+          "severity": "high"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.8,
+      "risk": "low"
+    },
+    {
+      "id": "h09",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/auth.py",
+          "line": 9,
+          "category": "security",
+          "type": "hardcoded_secret",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/auth.py",
+          "start_line": 9,
+          "end_line": 9,
+          "category": "security",
+          "severity": "high",
+          "status": "confirmed",
+          "confidence": 0.8,
+          "title": "Hardcoded credential",
+          "source": "rule:SEC007"
+        }
+      ],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.6,
+      "risk": "high"
+    },
+    {
+      "id": "h10",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/storage.py",
+          "line": 3,
+          "category": "security",
+          "type": "hardcoded_secret",
+          "severity": "high"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.5,
+      "risk": "low"
+    },
+    {
+      "id": "h11",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/auth.py",
+          "line": 28,
+          "category": "security",
+          "type": "authentication",
+          "severity": "critical"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.4,
+      "risk": "low"
+    },
+    {
+      "id": "h12",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/orders.py",
+          "line": 34,
+          "category": "security",
+          "type": "authorization",
+          "severity": "high"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.7,
+      "risk": "low"
+    },
+    {
+      "id": "h13",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/reports.py",
+          "line": 10,
+          "category": "security",
+          "type": "authorization",
+          "severity": "medium"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.6,
+      "risk": "low"
+    },
+    {
+      "id": "h14",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/api.py",
+          "line": 28,
+          "category": "security",
+          "type": "deserialization",
+          "severity": "critical"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/api.py",
+          "start_line": 28,
+          "end_line": 28,
+          "category": "security",
+          "severity": "high",
+          "status": "confirmed",
+          "confidence": 0.8,
+          "title": "Unsafe deserialization",
+          "source": "rule:SEC004"
+        }
+      ],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.6,
+      "risk": "high"
+    },
+    {
+      "id": "h15",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/api.py",
+          "line": 32,
+          "category": "security",
+          "type": "ssrf",
+          "severity": "high"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.7,
+      "risk": "low"
+    },
+    {
+      "id": "h16",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/auth.py",
+          "line": 12,
+          "category": "security",
+          "type": "weak_crypto",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/auth.py",
+          "start_line": 12,
+          "end_line": 12,
+          "category": "security",
+          "severity": "low",
+          "status": "confirmed",
+          "confidence": 0.8,
+          "title": "Weak hash function",
+          "source": "rule:SEC009"
+        }
+      ],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.5,
+      "risk": "low"
+    },
+    {
+      "id": "h17",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/billing.py",
+          "line": 8,
+          "category": "bug",
+          "type": "logic",
+          "severity": "high"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.3,
+      "risk": "low"
+    },
+    {
+      "id": "h18",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/inventory.py",
+          "line": 15,
+          "category": "bug",
+          "type": "logic",
+          "severity": "medium"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.5,
+      "risk": "low"
+    },
+    {
+      "id": "h19",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/orders.py",
+          "line": 11,
+          "category": "bug",
+          "type": "logic",
+          "severity": "medium"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.6,
+      "risk": "low"
+    },
+    {
+      "id": "h20",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/reports.py",
+          "line": 16,
+          "category": "bug",
+          "type": "error_handling",
+          "severity": "medium"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.4,
+      "risk": "low"
+    },
+    {
+      "id": "h21",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/inventory.py",
+          "line": 9,
+          "category": "bug",
+          "type": "error_handling",
+          "severity": "medium"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.5,
+      "risk": "low"
+    },
+    {
+      "id": "h22",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.5,
+      "risk": "low"
+    },
+    {
+      "id": "h23",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.9,
+      "risk": "low"
+    },
+    {
+      "id": "h24",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.5,
+      "risk": "low"
+    },
+    {
+      "id": "h25",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.9,
+      "risk": "low"
+    },
+    {
+      "id": "h26",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.6,
+      "risk": "low"
+    },
+    {
+      "id": "h27",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 3.6,
+      "risk": "low"
+    },
+    {
+      "id": "h28",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed.",
+        "bug analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "security analysis skipped: no LLM configured (GEMINI_API_KEY missing).",
+        "quality analysis skipped: no LLM configured (GEMINI_API_KEY missing)."
+      ],
+      "llm_calls": [],
+      "api_failures": 0,
+      "latency_ms": 4.0,
+      "risk": "low"
+    }
+  ],
+  "confirmed_only": {
+    "expected": 21,
+    "predicted": 5,
+    "detected": 5,
+    "true_positives": 5,
+    "false_positives": 0,
+    "duplicates": 0,
+    "precision": 1.0,
+    "recall": 0.2381,
+    "f1": 0.3846,
+    "lenient_precision": 1.0,
+    "lenient_recall": 0.2381,
+    "lenient_f1": 0.3846,
+    "false_negative_rate": 0.7619,
+    "clean_cases": 7,
+    "clean_case_false_positive_rate": 0.0,
+    "category_accuracy": 1.0,
+    "severity_exact": 0.6,
+    "severity_within_one": 0.8,
+    "line_exact": 1.0,
+    "line_tolerance": 2,
+    "duplicate_rate": 0.0,
+    "by_type": {
+      "authentication": {
+        "expected": 1,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "authorization": {
+        "expected": 2,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "command_injection": {
+        "expected": 2,
+        "detected": 1,
+        "strict": 1,
+        "recall": 0.5,
+        "detection_rate": 0.5
+      },
+      "deserialization": {
+        "expected": 1,
+        "detected": 1,
+        "strict": 1,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "error_handling": {
+        "expected": 2,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "hardcoded_secret": {
+        "expected": 2,
+        "detected": 1,
+        "strict": 1,
+        "recall": 0.5,
+        "detection_rate": 0.5
+      },
+      "idor": {
+        "expected": 2,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "logic": {
+        "expected": 3,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "path_traversal": {
+        "expected": 2,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "sql_injection": {
+        "expected": 2,
+        "detected": 1,
+        "strict": 1,
+        "recall": 0.5,
+        "detection_rate": 0.5
+      },
+      "ssrf": {
+        "expected": 1,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "weak_crypto": {
+        "expected": 1,
+        "detected": 1,
+        "strict": 1,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      }
+    },
+    "confusion_matrix": {
+      "rows": [
+        "security",
+        "bug",
+        "clean"
+      ],
+      "columns": [
+        "security",
+        "bug",
+        "quality",
+        "none"
+      ],
+      "counts": {
+        "security": {
+          "security": 5,
+          "bug": 0,
+          "quality": 0,
+          "none": 11
+        },
+        "bug": {
+          "security": 0,
+          "bug": 0,
+          "quality": 0,
+          "none": 5
+        },
+        "clean": {
+          "security": 0,
+          "bug": 0,
+          "quality": 0,
+          "none": 7
+        }
+      }
+    },
+    "per_case": [
+      {
+        "id": "h01",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h02",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h03",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h04",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h05",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h06",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h07",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h08",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h09",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h10",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h11",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h12",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h13",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h14",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h15",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h16",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h17",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h18",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h19",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h20",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h21",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h22",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h23",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h24",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h25",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h26",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h27",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h28",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      }
+    ]
+  },
+  "including_possible": {
+    "expected": 21,
+    "predicted": 5,
+    "detected": 5,
+    "true_positives": 5,
+    "false_positives": 0,
+    "duplicates": 0,
+    "precision": 1.0,
+    "recall": 0.2381,
+    "f1": 0.3846,
+    "lenient_precision": 1.0,
+    "lenient_recall": 0.2381,
+    "lenient_f1": 0.3846,
+    "false_negative_rate": 0.7619,
+    "clean_cases": 7,
+    "clean_case_false_positive_rate": 0.0,
+    "category_accuracy": 1.0,
+    "severity_exact": 0.6,
+    "severity_within_one": 0.8,
+    "line_exact": 1.0,
+    "line_tolerance": 2,
+    "duplicate_rate": 0.0,
+    "by_type": {
+      "authentication": {
+        "expected": 1,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "authorization": {
+        "expected": 2,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "command_injection": {
+        "expected": 2,
+        "detected": 1,
+        "strict": 1,
+        "recall": 0.5,
+        "detection_rate": 0.5
+      },
+      "deserialization": {
+        "expected": 1,
+        "detected": 1,
+        "strict": 1,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "error_handling": {
+        "expected": 2,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "hardcoded_secret": {
+        "expected": 2,
+        "detected": 1,
+        "strict": 1,
+        "recall": 0.5,
+        "detection_rate": 0.5
+      },
+      "idor": {
+        "expected": 2,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "logic": {
+        "expected": 3,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "path_traversal": {
+        "expected": 2,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "sql_injection": {
+        "expected": 2,
+        "detected": 1,
+        "strict": 1,
+        "recall": 0.5,
+        "detection_rate": 0.5
+      },
+      "ssrf": {
+        "expected": 1,
+        "detected": 0,
+        "strict": 0,
+        "recall": 0.0,
+        "detection_rate": 0.0
+      },
+      "weak_crypto": {
+        "expected": 1,
+        "detected": 1,
+        "strict": 1,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      }
+    },
+    "confusion_matrix": {
+      "rows": [
+        "security",
+        "bug",
+        "clean"
+      ],
+      "columns": [
+        "security",
+        "bug",
+        "quality",
+        "none"
+      ],
+      "counts": {
+        "security": {
+          "security": 5,
+          "bug": 0,
+          "quality": 0,
+          "none": 11
+        },
+        "bug": {
+          "security": 0,
+          "bug": 0,
+          "quality": 0,
+          "none": 5
+        },
+        "clean": {
+          "security": 0,
+          "bug": 0,
+          "quality": 0,
+          "none": 7
+        }
+      }
+    },
+    "per_case": [
+      {
+        "id": "h01",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h02",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h03",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h04",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h05",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h06",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h07",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h08",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h09",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h10",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h11",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h12",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h13",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h14",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h15",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h16",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h17",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h18",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h19",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h20",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h21",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h22",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h23",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h24",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h25",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h26",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h27",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h28",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      }
+    ]
+  },
+  "legacy_scores": {
+    "finding_precision": 1.0,
+    "finding_recall": 0.2381,
+    "false_positive_findings": 0,
+    "clean_case_false_positive_rate": 0.0,
+    "predicted": 5,
+    "expected": 21,
+    "true_positives": 5
+  },
+  "latency": {
+    "n": 28,
+    "mean_ms": 3.7,
+    "median_ms": 3.6,
+    "p95_ms": 4.0,
+    "max_ms": 6.8
+  },
+  "tokens": {
+    "total": 0,
+    "per_case_mean": 0.0,
+    "reported_calls": 0
+  },
+  "api_failures": 0,
+  "cases_with_errors": 0
+}

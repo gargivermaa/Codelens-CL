@@ -1,0 +1,399 @@
+{
+ "description": "Changed-code and natural-language queries against benchmarks/sample_repo with hand-labelled relevant chunks (file::qualified_name). Splits: dev (original 15, seen during development), validation (parameter tuning), holdout (headline results, never tuned on).",
+ "repo": "sample_repo",
+ "cases": [
+  {
+   "id": "q01",
+   "query": "def admin_refund_report(db, admin):\n    require_role(admin, \"admin\")\n    return db.fetch_all(\"SELECT * FROM refunds\")",
+   "relevant": [
+    "shopapp/auth.py::require_role",
+    "shopapp/reports.py::sales_by_country"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q02",
+   "query": "def login(db, email, password):\n    user = db.fetch_one(\"SELECT * FROM users WHERE email = %s\", (email,))\n    if user and verify_password(password, user['salt'], user['hash']):\n        return create_session(db, user['id'])",
+   "relevant": [
+    "shopapp/auth.py::verify_password",
+    "shopapp/auth.py::create_session",
+    "shopapp/storage.py::Database.fetch_one"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q03",
+   "query": "    coupon = coupon_code.strip()\n    percent = COUPONS[coupon]\n    return subtotal_cents * percent // 100",
+   "relevant": [
+    "shopapp/billing.py::calculate_discount",
+    "shopapp/billing.py::order_total"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q04",
+   "query": "def cancel_order(db, user, order_id):\n    order = get_order(db, user, order_id)\n    change_status(db, order, 'cancelled')",
+   "relevant": [
+    "shopapp/orders.py::get_order",
+    "shopapp/orders.py::change_status"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q05",
+   "query": "    tax = amount * TAX_RATES[country] / 100\n    return amount + tax",
+   "relevant": [
+    "shopapp/billing.py::apply_tax"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q06",
+   "query": "def notify_shipped(order):\n    body = render_template(SHIPPED_TEMPLATE, order)\n    send_email(order['email'], 'Your order has shipped', body)",
+   "relevant": [
+    "shopapp/notifications.py::send_email",
+    "shopapp/notifications.py::render_template"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q07",
+   "query": "def replace_product_image(filename, data):\n    path = UPLOAD_ROOT / filename\n    path.write_bytes(data)",
+   "relevant": [
+    "shopapp/uploads.py::save_upload",
+    "shopapp/uploads.py::safe_upload_path"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q08",
+   "query": "        with self.connection.cursor() as cursor:\n            cursor.execute(sql, params)\n            rows = cursor.fetchall()",
+   "relevant": [
+    "shopapp/storage.py::Database.fetch_all",
+    "shopapp/storage.py::Database.fetch_one",
+    "shopapp/storage.py::Database.execute",
+    "shopapp/storage.py::Database"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q09",
+   "query": "def logout(db, token):\n    db.execute(\"DELETE FROM sessions WHERE token = %s\", (token,))",
+   "relevant": [
+    "shopapp/auth.py::create_session",
+    "shopapp/auth.py::get_user_for_session"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q10",
+   "query": "def reset_password(db, user_id, new_password):\n    salt = os.urandom(16)\n    hashed = hash_password(new_password, salt)",
+   "relevant": [
+    "shopapp/auth.py::hash_password",
+    "shopapp/auth.py::verify_password"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q11",
+   "query": "    writer = csv.writer(buffer)\n    writer.writerow(header)\n    return buffer.getvalue()",
+   "relevant": [
+    "shopapp/reports.py::export_csv"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q12",
+   "query": "def checkout(db, user, cart_items, coupon, country):\n    total = order_total(cart_items, coupon, country)\n    return charge_card(user, total)",
+   "relevant": [
+    "shopapp/billing.py::order_total",
+    "shopapp/orders.py::create_order"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q13",
+   "query": "make sure the user is allowed to view this order before returning it",
+   "relevant": [
+    "shopapp/orders.py::get_order",
+    "shopapp/auth.py::require_role"
+   ],
+   "split": "dev",
+   "kind": "natural_language"
+  },
+  {
+   "id": "q14",
+   "query": "    if new_status not in VALID_TRANSITIONS[order['status']]:\n        raise ValueError('bad transition')",
+   "relevant": [
+    "shopapp/orders.py::change_status"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q15",
+   "query": "    if len(data) > MAX_UPLOAD_BYTES:\n        raise ValueError('too big')",
+   "relevant": [
+    "shopapp/uploads.py::save_upload"
+   ],
+   "split": "dev",
+   "kind": "code"
+  },
+  {
+   "id": "q16",
+   "split": "validation",
+   "kind": "code",
+   "query": "def ban_user(db, admin, user_id):\n    require_role(admin, 'admin')\n    db.execute(\"UPDATE users SET banned = true WHERE id = %s\", (user_id,))",
+   "relevant": [
+    "shopapp/auth.py::require_role",
+    "shopapp/admin.py::set_user_role",
+    "shopapp/admin.py::delete_user"
+   ]
+  },
+  {
+   "id": "q17",
+   "split": "validation",
+   "kind": "code",
+   "query": "    available = get_stock(db, product_id)\n    if available < LOW_STOCK_THRESHOLD:\n        notify_restock(product_id)",
+   "relevant": [
+    "shopapp/inventory.py::get_stock",
+    "shopapp/inventory.py::low_stock_products"
+   ]
+  },
+  {
+   "id": "q18",
+   "split": "validation",
+   "kind": "natural_language",
+   "query": "which function checks that a webhook URL points to an allowed partner host",
+   "relevant": [
+    "shopapp/api.py::notify_partner"
+   ]
+  },
+  {
+   "id": "q19",
+   "split": "validation",
+   "kind": "code",
+   "query": "def handle_refund(db, request):\n    user = current_user(db, request)\n    order = get_order(db, user, int(request['params']['order_id']))",
+   "relevant": [
+    "shopapp/api.py::current_user",
+    "shopapp/orders.py::get_order",
+    "shopapp/orders.py::refund_order",
+    "shopapp/api.py::handle_get_order"
+   ]
+  },
+  {
+   "id": "q20",
+   "split": "validation",
+   "kind": "natural_language",
+   "query": "remove a user account together with their login sessions",
+   "relevant": [
+    "shopapp/admin.py::delete_user"
+   ]
+  },
+  {
+   "id": "q21",
+   "split": "validation",
+   "kind": "code",
+   "query": "    page_rows = paginate(orders, page)\n    return export_csv(page_rows)",
+   "relevant": [
+    "shopapp/inventory.py::paginate",
+    "shopapp/reports.py::export_csv"
+   ]
+  },
+  {
+   "id": "q22",
+   "split": "validation",
+   "kind": "natural_language",
+   "query": "limit how big an uploaded product image may be",
+   "relevant": [
+    "shopapp/uploads.py::save_upload"
+   ]
+  },
+  {
+   "id": "q23",
+   "split": "validation",
+   "kind": "code",
+   "query": "    token = request['cookies']['session']\n    user = get_user_for_session(db, token)",
+   "relevant": [
+    "shopapp/auth.py::get_user_for_session",
+    "shopapp/api.py::current_user"
+   ]
+  },
+  {
+   "id": "q24",
+   "split": "validation",
+   "kind": "natural_language",
+   "query": "compute what a customer pays including coupon and VAT",
+   "relevant": [
+    "shopapp/billing.py::order_total",
+    "shopapp/billing.py::calculate_discount",
+    "shopapp/billing.py::apply_tax"
+   ]
+  },
+  {
+   "id": "q25",
+   "split": "validation",
+   "kind": "code",
+   "query": "    settings = json.loads(request['body'])\n    validate_settings(settings)",
+   "relevant": [
+    "shopapp/api.py::handle_import_settings"
+   ]
+  },
+  {
+   "id": "q26",
+   "split": "holdout",
+   "kind": "code",
+   "query": "def promote_to_support(db, admin, user_id):\n    set_user_role(db, admin, user_id, 'support')",
+   "relevant": [
+    "shopapp/admin.py::set_user_role"
+   ]
+  },
+  {
+   "id": "q27",
+   "split": "holdout",
+   "kind": "code",
+   "query": "    for item in cart:\n        if item['quantity'] > get_stock(db, item['product_id']):\n            raise ValueError('out of stock')",
+   "relevant": [
+    "shopapp/inventory.py::reserve_items",
+    "shopapp/inventory.py::get_stock"
+   ]
+  },
+  {
+   "id": "q28",
+   "split": "holdout",
+   "kind": "natural_language",
+   "query": "list every account with its role for the admin panel",
+   "relevant": [
+    "shopapp/admin.py::list_users"
+   ]
+  },
+  {
+   "id": "q29",
+   "split": "holdout",
+   "kind": "code",
+   "query": "    with urllib.request.urlopen(url, timeout=5) as response:\n        return response.status",
+   "relevant": [
+    "shopapp/api.py::notify_partner"
+   ]
+  },
+  {
+   "id": "q30",
+   "split": "holdout",
+   "kind": "natural_language",
+   "query": "who is allowed to issue a refund for an order",
+   "relevant": [
+    "shopapp/orders.py::refund_order",
+    "shopapp/auth.py::require_role"
+   ]
+  },
+  {
+   "id": "q31",
+   "split": "holdout",
+   "kind": "code",
+   "query": "    hashed = hash_password(new_password, salt)\n    if verify_password(old_password, salt, user['hash']):",
+   "relevant": [
+    "shopapp/auth.py::hash_password",
+    "shopapp/auth.py::verify_password"
+   ]
+  },
+  {
+   "id": "q32",
+   "split": "holdout",
+   "kind": "natural_language",
+   "query": "send a message to the customer by email",
+   "relevant": [
+    "shopapp/notifications.py::send_email"
+   ]
+  },
+  {
+   "id": "q33",
+   "split": "holdout",
+   "kind": "code",
+   "query": "    rows = db.fetch_all(\"SELECT product_id, quantity FROM stock WHERE quantity < %s\", (threshold,))",
+   "relevant": [
+    "shopapp/inventory.py::low_stock_products",
+    "shopapp/storage.py::Database.fetch_all"
+   ]
+  },
+  {
+   "id": "q34",
+   "split": "holdout",
+   "kind": "natural_language",
+   "query": "make sure an uploaded filename cannot escape the upload directory",
+   "relevant": [
+    "shopapp/uploads.py::safe_upload_path"
+   ]
+  },
+  {
+   "id": "q35",
+   "split": "holdout",
+   "kind": "code",
+   "query": "    total = order_total(items, coupon, country)\n    db.execute(\"INSERT INTO orders (user_id, total_cents) VALUES (%s, %s)\", (user['id'], total))",
+   "relevant": [
+    "shopapp/orders.py::create_order",
+    "shopapp/billing.py::order_total"
+   ]
+  },
+  {
+   "id": "q36",
+   "split": "holdout",
+   "kind": "natural_language",
+   "query": "move an order from paid to shipped and reject invalid transitions",
+   "relevant": [
+    "shopapp/orders.py::change_status"
+   ]
+  },
+  {
+   "id": "q37",
+   "split": "holdout",
+   "kind": "code",
+   "query": "def export_users(db, admin):\n    return export_csv(list_users(db, admin))",
+   "relevant": [
+    "shopapp/reports.py::export_csv",
+    "shopapp/admin.py::list_users"
+   ]
+  },
+  {
+   "id": "q38",
+   "split": "holdout",
+   "kind": "natural_language",
+   "query": "fill placeholders like {{name}} in an email template",
+   "relevant": [
+    "shopapp/notifications.py::render_template"
+   ]
+  },
+  {
+   "id": "q39",
+   "split": "holdout",
+   "kind": "code",
+   "query": "    with self.connection.cursor() as cursor:\n        cursor.execute(sql, params)\n    self.connection.commit()",
+   "relevant": [
+    "shopapp/storage.py::Database.execute",
+    "shopapp/storage.py::Database"
+   ]
+  },
+  {
+   "id": "q40",
+   "split": "holdout",
+   "kind": "natural_language",
+   "query": "handler that returns one order to the logged-in customer",
+   "relevant": [
+    "shopapp/api.py::handle_get_order",
+    "shopapp/orders.py::get_order"
+   ]
+  }
+ ],
+ "version": "2.0"
+}

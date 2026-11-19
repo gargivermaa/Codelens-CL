@@ -1,0 +1,3633 @@
+{
+  "benchmark": "review",
+  "measured": true,
+  "run_id": "review-llm-holdout-20261118T174433Z-90f6a7",
+  "mode": "llm",
+  "config": "llm",
+  "split": "holdout",
+  "repeats": 1,
+  "dataset_version": "68f11f6c4304",
+  "dataset_schema": "2.0",
+  "environment": {
+    "timestamp": "2026-11-18T17:44:33.519175+00:00",
+    "python": "3.11.9",
+    "embedding_model": "gemini-embedding-001",
+    "dimensions": 1536,
+    "query_task_type": "CODE_RETRIEVAL_QUERY",
+    "review_model": "gemini-3.5-flash-lite",
+    "generation_config": {
+      "temperature": 0.1,
+      "max_output_tokens": 8192,
+      "response_mime_type": "application/json"
+    },
+    "prompt_version": "5a9b3b443111",
+    "retrieval": {
+      "top_k": 5,
+      "rrf_k": 60
+    }
+  },
+  "n_cases": 28,
+  "cases": [
+    {
+      "id": "h01",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/orders.py",
+          "line": 30,
+          "category": "security",
+          "type": "sql_injection",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/orders.py",
+          "start_line": 30,
+          "end_line": 30,
+          "category": "security",
+          "severity": "critical",
+          "status": "confirmed",
+          "confidence": 1.0,
+          "title": "SQL Injection vulnerability in change_status",
+          "source": "llm:security+llm:bug+llm:quality+rule:SEC008"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "SQL Injection vulnerability in order status update",
+          "description": "Using f-strings to construct SQL queries directly with user-supplied parameters allows SQL injection attacks.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/orders.py",
+          "start_line": 30,
+          "end_line": 30,
+          "comment_line": null,
+          "evidence": "db.execute(f\"UPDATE orders SET status = '{new_status}' WHERE id = {order['id']}\")",
+          "explanation": "Interpolating `new_status` and `order['id']` directly into the SQL string via f-string bypasses query parameterization, making the application vulnerable to SQL injection.",
+          "suggested_fix": "db.execute(\"UPDATE orders SET status = %s WHERE id = %s\", (new_status, order[\"id\"]))",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "SQL Injection vulnerability in change_status",
+          "description": "The code uses f-strings to construct a SQL query with untrusted input (new_status and order['id']), which allows SQL injection attacks.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 1.0,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/orders.py",
+          "start_line": 30,
+          "end_line": 30,
+          "comment_line": null,
+          "evidence": "db.execute(f\"UPDATE orders SET status = '{new_status}' WHERE id = {order['id']}\")",
+          "explanation": "String interpolation via f-strings directly into SQL execution allows attackers to manipulate the query structure.",
+          "suggested_fix": "db.execute(\"UPDATE orders SET status = %s WHERE id = %s\", (new_status, order[\"id\"]))",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "SQL injection vulnerability via f-string formatting",
+          "description": "The code uses f-strings to format user input and database values directly into an SQL query instead of using parameterized queries, introducing a potential SQL injection vulnerability.",
+          "category": "security",
+          "severity": "high",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:quality",
+          "file": "shopapp/orders.py",
+          "start_line": 30,
+          "end_line": 30,
+          "comment_line": null,
+          "evidence": "db.execute(f\"UPDATE orders SET status = '{new_status}' WHERE id = {order['id']}\")",
+          "explanation": "Using f-strings for SQL queries opens up the application to SQL injection. Previously, parameterized queries were used correctly.",
+          "suggested_fix": "db.execute(\"UPDATE orders SET status = %s WHERE id = %s\", (new_status, order[\"id\"]))",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"SQL Injection vulnerability in order status update\",\n      \"description\": \"Using f-strings to construct SQL queries directly with user-supplied parameters allows SQL injection attacks.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/orders.py\",\n      \"start_line\": 30,\n      \"end_line\": 30,\n      \"evidence\": \"db.execute(f\\\"UPDATE orders SET status = '{new_status}' WHERE id = {order['id']}\\\")\",\n      \"explanation\": \"Interpolating `new_status` and `order['id']` directly into the SQL string via f-string bypasses query parameterization, making the application vulnerable to SQL injection.\",\n      \"suggested_fix\": \"db.execute(\\\"UPDATE orders SET status = %s WHERE id = %s\\\", (new_status, order[\\\"id\\\"]))\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\"findings\": [{\"title\": \"SQL Injection vulnerability in change_status\", \"description\": \"The code uses f-strings to construct a SQL query with untrusted input (new_status and order['id']), which allows SQL injection attacks.\", \"category\": \"security\", \"severity\": \"critical\", \"confidence\": 1.0, \"file\": \"shopapp/orders.py\", \"start_line\": 30, \"end_line\": 30, \"evidence\": \"db.execute(f\\\"UPDATE orders SET status = '{new_status}' WHERE id = {order['id']}\\\")\", \"explanation\": \"String interpolation via f-strings directly into SQL execution allows attackers to manipulate the query structure.\", \"suggested_fix\": \"db.execute(\\\"UPDATE orders SET status = %s WHERE id = %s\\\", (new_status, order[\\\"id\\\"]))\"}]}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"SQL injection vulnerability via f-string formatting\",\n      \"description\": \"The code uses f-strings to format user input and database values directly into an SQL query instead of using parameterized queries, introducing a potential SQL injection vulnerability.\",\n      \"category\": \"security\",\n      \"severity\": \"high\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/orders.py\",\n      \"start_line\": 30,\n      \"end_line\": 30,\n      \"evidence\": \"db.execute(f\\\"UPDATE orders SET status = '{new_status}' WHERE id = {order['id']}\\\")\",\n      \"explanation\": \"Using f-strings for SQL queries opens up the application to SQL injection. Previously, parameterized queries were used correctly.\",\n      \"suggested_fix\": \"db.execute(\\\"UPDATE orders SET status = %s WHERE id = %s\\\", (new_status, order[\\\"id\\\"]))\"\n    }\n  ]\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "SQL Injection vulnerability in order status update",
+          "reason": "duplicate of 'SQL Injection vulnerability in change_status'"
+        },
+        {
+          "title": "SQL injection vulnerability via f-string formatting",
+          "reason": "duplicate of 'SQL Injection vulnerability in change_status'"
+        },
+        {
+          "title": "SQL query built with string formatting",
+          "reason": "duplicate of 'SQL Injection vulnerability in change_status'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 789,
+          "output_tokens": 234,
+          "latency_ms": 2604,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 790,
+          "output_tokens": 189,
+          "latency_ms": 5928,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 794,
+          "output_tokens": 233,
+          "latency_ms": 19210,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 27765.1,
+      "risk": "critical"
+    },
+    {
+      "id": "h02",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/reports.py",
+          "line": 25,
+          "category": "security",
+          "type": "sql_injection",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/reports.py",
+          "start_line": 23,
+          "end_line": 25,
+          "category": "security",
+          "severity": "critical",
+          "status": "confirmed",
+          "confidence": 0.95,
+          "title": "SQL Injection Vulnerability via String Formatting",
+          "source": "llm:bug+llm:security+llm:quality"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "SQL Injection Vulnerability via String Formatting",
+          "description": "User-supplied start and end date strings are directly interpolated into the SQL query string using string formatting, which introduces an SQL injection vulnerability.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/reports.py",
+          "start_line": 23,
+          "end_line": 25,
+          "comment_line": null,
+          "evidence": "def sales_for_period(db: Database, admin: dict, start: str, end: str) -> list[dict]:\n    require_role(admin, \"admin\")\n    return db.fetch_all(\"SELECT * FROM orders WHERE created_at BETWEEN '%s' AND '%s'\" % (start, end))",
+          "explanation": "Interpolating parameters directly into SQL query strings allows malicious input to alter the structure of the query. Parameterized queries should be used instead.",
+          "suggested_fix": "return db.fetch_all(\"SELECT * FROM orders WHERE created_at BETWEEN ? AND ?\", (start, end))",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "SQL Injection in sales_for_period",
+          "description": "String formatting is used to insert untrusted start and end date parameters directly into a SQL query string, which enables SQL injection attacks.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/reports.py",
+          "start_line": 23,
+          "end_line": 25,
+          "comment_line": null,
+          "evidence": "def sales_for_period(db: Database, admin: dict, start: str, end: str) -> list[dict]:\n    require_role(admin, \"admin\")\n    return db.fetch_all(\"SELECT * FROM orders WHERE created_at BETWEEN '%s' AND '%s'\" % (start, end))",
+          "explanation": "The parameters `start` and `end` are formatted directly into the SQL query string using `%s`. If an attacker supplies malicious input via these parameters, they can manipulate the SQL query structure.",
+          "suggested_fix": "Use parameterized queries instead of string formatting, e.g., db.fetch_all(\"SELECT * FROM orders WHERE created_at BETWEEN ? AND ?\", (start, end)) depending on the database library's parameter substitution syntax.",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "SQL Injection Vulnerability via String Formatting",
+          "description": "The function concatenates input string parameters directly into the SQL query string using string formatting, which introduces a SQL injection vulnerability.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:quality",
+          "file": "shopapp/reports.py",
+          "start_line": 25,
+          "end_line": 25,
+          "comment_line": null,
+          "evidence": "return db.fetch_all(\"SELECT * FROM orders WHERE created_at BETWEEN '%s' AND '%s'\" % (start, end))",
+          "explanation": "Using Python string formatting or interpolation for database queries allows untrusted input to alter the structure of the SQL query. Parameterized queries should be used instead.",
+          "suggested_fix": "return db.fetch_all(\"SELECT * FROM orders WHERE created_at BETWEEN ? AND ?\", (start, end))",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"SQL Injection Vulnerability via String Formatting\",\n      \"description\": \"User-supplied start and end date strings are directly interpolated into the SQL query string using string formatting, which introduces an SQL injection vulnerability.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/reports.py\",\n      \"start_line\": 23,\n      \"end_line\": 25,\n      \"evidence\": \"def sales_for_period(db: Database, admin: dict, start: str, end: str) -> list[dict]:\\n    require_role(admin, \\\"admin\\\")\\n    return db.fetch_all(\\\"SELECT * FROM orders WHERE created_at BETWEEN '%s' AND '%s'\\\" % (start, end))\",\n      \"explanation\": \"Interpolating parameters directly into SQL query strings allows malicious input to alter the structure of the query. Parameterized queries should be used instead.\",\n      \"suggested_fix\": \"return db.fetch_all(\\\"SELECT * FROM orders WHERE created_at BETWEEN ? AND ?\\\", (start, end))\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"SQL Injection in sales_for_period\",\n      \"description\": \"String formatting is used to insert untrusted start and end date parameters directly into a SQL query string, which enables SQL injection attacks.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/reports.py\",\n      \"start_line\": 23,\n      \"end_line\": 25,\n      \"evidence\": \"def sales_for_period(db: Database, admin: dict, start: str, end: str) -> list[dict]:\\n    require_role(admin, \\\"admin\\\")\\n    return db.fetch_all(\\\"SELECT * FROM orders WHERE created_at BETWEEN '%s' AND '%s'\\\" % (start, end))\",\n      \"explanation\": \"The parameters `start` and `end` are formatted directly into the SQL query string using `%s`. If an attacker supplies malicious input via these parameters, they can manipulate the SQL query structure.\",\n      \"suggested_fix\": \"Use parameterized queries instead of string formatting, e.g., db.fetch_all(\\\"SELECT * FROM orders WHERE created_at BETWEEN ? AND ?\\\", (start, end)) depending on the database library's parameter substitution syntax.\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"SQL Injection Vulnerability via String Formatting\",\n      \"description\": \"The function concatenates input string parameters directly into the SQL query string using string formatting, which introduces a SQL injection vulnerability.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/reports.py\",\n      \"start_line\": 25,\n      \"end_line\": 25,\n      \"evidence\": \"return db.fetch_all(\\\"SELECT * FROM orders WHERE created_at BETWEEN '%s' AND '%s'\\\" % (start, end))\",\n      \"explanation\": \"Using Python string formatting or interpolation for database queries allows untrusted input to alter the structure of the SQL query. Parameterized queries should be used instead.\",\n      \"suggested_fix\": \"return db.fetch_all(\\\"SELECT * FROM orders WHERE created_at BETWEEN ? AND ?\\\", (start, end))\"\n    }\n  ]\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "SQL Injection in sales_for_period",
+          "reason": "duplicate of 'SQL Injection Vulnerability via String Formatting'"
+        },
+        {
+          "title": "SQL Injection Vulnerability via String Formatting",
+          "reason": "duplicate of 'SQL Injection Vulnerability via String Formatting'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 724,
+          "output_tokens": 277,
+          "latency_ms": 1994,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 725,
+          "output_tokens": 310,
+          "latency_ms": 2001,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 729,
+          "output_tokens": 234,
+          "latency_ms": 6189,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 10195.1,
+      "risk": "critical"
+    },
+    {
+      "id": "h03",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/orders.py",
+          "line": 40,
+          "category": "security",
+          "type": "idor",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/orders.py",
+          "start_line": 39,
+          "end_line": 40,
+          "category": "security",
+          "severity": "high",
+          "status": "confirmed",
+          "confidence": 0.9,
+          "title": "Missing Authorization Check in get_invoice",
+          "source": "llm:security"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Missing Authorization Check in get_invoice",
+          "description": "The function get_invoice fetches an invoice by ID without verifying if the requesting user has permission or ownership over the requested invoice, leading to an Insecure Direct Object Reference (IDOR) vulnerability.",
+          "category": "security",
+          "severity": "high",
+          "confidence": 0.9,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/orders.py",
+          "start_line": 39,
+          "end_line": 40,
+          "comment_line": null,
+          "evidence": "def get_invoice(db: Database, user: dict, invoice_id: int) -> dict:\n    return db.fetch_one(\"SELECT * FROM invoices WHERE id = %s\", (invoice_id,))",
+          "explanation": "The function accepts a user dictionary parameter but never checks if the user is authorized to view the invoice with invoice_id, allowing any user to access any invoice by guessing IDs.",
+          "suggested_fix": "Modify the query to ensure the invoice belongs to the user or that the user has admin rights: db.fetch_one(\"SELECT * FROM invoices WHERE id = %s AND user_id = %s\", (invoice_id, user[\"id\"]))",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Missing Authorization Check in get_invoice\",\n      \"description\": \"The function get_invoice fetches an invoice by ID without verifying if the requesting user has permission or ownership over the requested invoice, leading to an Insecure Direct Object Reference (IDOR) vulnerability.\",\n      \"category\": \"security\",\n      \"severity\": \"high\",\n      \"confidence\": 0.9,\n      \"file\": \"shopapp/orders.py\",\n      \"start_line\": 39,\n      \"end_line\": 40,\n      \"evidence\": \"def get_invoice(db: Database, user: dict, invoice_id: int) -> dict:\\n    return db.fetch_one(\\\"SELECT * FROM invoices WHERE id = %s\\\", (invoice_id,))\",\n      \"explanation\": \"The function accepts a user dictionary parameter but never checks if the user is authorized to view the invoice with invoice_id, allowing any user to access any invoice by guessing IDs.\",\n      \"suggested_fix\": \"Modify the query to ensure the invoice belongs to the user or that the user has admin rights: db.fetch_one(\\\"SELECT * FROM invoices WHERE id = %s AND user_id = %s\\\", (invoice_id, user[\\\"id\\\"]))\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 696,
+          "output_tokens": 9,
+          "latency_ms": 1431,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 697,
+          "output_tokens": 297,
+          "latency_ms": 2159,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 701,
+          "output_tokens": 9,
+          "latency_ms": 5334,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 8938.9,
+      "risk": "high"
+    },
+    {
+      "id": "h04",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/api.py",
+          "line": 43,
+          "category": "security",
+          "type": "idor",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/api.py",
+          "start_line": 43,
+          "end_line": 43,
+          "category": "bug",
+          "severity": "high",
+          "status": "confirmed",
+          "confidence": 0.95,
+          "title": "Email update stores raw request body dictionary instead of email string",
+          "source": "llm:bug"
+        },
+        {
+          "file": "shopapp/api.py",
+          "start_line": 40,
+          "end_line": 44,
+          "category": "security",
+          "severity": "high",
+          "status": "confirmed",
+          "confidence": 0.9,
+          "title": "Missing Authorization Check Allows IDOR",
+          "source": "llm:security"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Email update stores raw request body dictionary instead of email string",
+          "description": "The SQL update statement uses the entire request body dictionary as the email parameter instead of extracting the email field from it.",
+          "category": "bug",
+          "severity": "high",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/api.py",
+          "start_line": 43,
+          "end_line": 43,
+          "comment_line": null,
+          "evidence": "db.execute(\"UPDATE users SET email = %s WHERE id = %s\", (request[\"body\"], target_id))",
+          "explanation": "request['body'] is expected to be a dictionary or payload object, but the database column 'email' expects a string value. It should likely extract a specific field like request['body']['email'].",
+          "suggested_fix": "db.execute(\"UPDATE users SET email = %s WHERE id = %s\", (request[\"body\"][\"email\"], target_id))",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "Unused current_user authentication check result",
+          "description": "The function calls current_user(db, request) to retrieve the user, but never checks if the user is authenticated or authorized to update the target user's email.",
+          "category": "bug",
+          "severity": "high",
+          "confidence": 0.9,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/api.py",
+          "start_line": 41,
+          "end_line": 41,
+          "comment_line": null,
+          "evidence": "user = current_user(db, request)",
+          "explanation": "Any user can pass any target_id and update anyone's email because the returned 'user' variable is never validated or used to check permissions against target_id.",
+          "suggested_fix": "if not user or (user['id'] != target_id and not user.get('is_admin')):\n    raise PermissionError('Unauthorized')",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "Missing Authorization Check Allows IDOR",
+          "description": "The handle_update_email function updates a user's email based on the provided user_id parameter without verifying if the currently authenticated user owns that account or has administrative privileges, enabling Insecure Direct Object Reference (IDOR).",
+          "category": "security",
+          "severity": "high",
+          "confidence": 0.9,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/api.py",
+          "start_line": 40,
+          "end_line": 44,
+          "comment_line": null,
+          "evidence": "def handle_update_email(db: Database, request: dict) -> dict:\n    user = current_user(db, request)\n    target_id = int(request[",
+          "explanation": "",
+          "suggested_fix": "",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Email update stores raw request body dictionary instead of email string\",\n      \"description\": \"The SQL update statement uses the entire request body dictionary as the email parameter instead of extracting the email field from it.\",\n      \"category\": \"bug\",\n      \"severity\": \"high\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/api.py\",\n      \"start_line\": 43,\n      \"end_line\": 43,\n      \"evidence\": \"db.execute(\\\"UPDATE users SET email = %s WHERE id = %s\\\", (request[\\\"body\\\"], target_id))\",\n      \"explanation\": \"request['body'] is expected to be a dictionary or payload object, but the database column 'email' expects a string value. It should likely extract a specific field like request['body']['email'].\",\n      \"suggested_fix\": \"db.execute(\\\"UPDATE users SET email = %s WHERE id = %s\\\", (request[\\\"body\\\"][\\\"email\\\"], target_id))\"\n    },\n    {\n      \"title\": \"Unused current_user authentication check result\",\n      \"description\": \"The function calls current_user(db, request) to retrieve the user, but never checks if the user is authenticated or authorized to update the target user's email.\",\n      \"category\": \"bug\",\n      \"severity\": \"high\",\n      \"confidence\": 0.90,\n      \"file\": \"shopapp/api.py\",\n      \"start_line\": 41,\n      \"end_line\": 41,\n      \"evidence\": \"user = current_user(db, request)\",\n      \"explanation\": \"Any user can pass any target_id and update anyone's email because the returned 'user' variable is never validated or used to check permissions against target_id.\",\n      \"suggested_fix\": \"if not user or (user['id'] != target_id and not user.get('is_admin')):\\n    raise PermissionError('Unauthorized')\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Missing Authorization Check Allows IDOR\",\n      \"description\": \"The handle_update_email function updates a user's email based on the provided user_id parameter without verifying if the currently authenticated user owns that account or has administrative privileges, enabling Insecure Direct Object Reference (IDOR).\",\n      \"category\": \"security\",\n      \"severity\": \"high\",\n      \"confidence\": 0.9,\n      \"file\": \"shopapp/api.py\",\n      \"start_line\": 40,\n      \"end_line\": 44,\n      \"evidence\": \"def handle_update_email(db: Database, request: dict) -> dict:\\n    user = current_user(db, request)\\n    target_id = int(request[\"        \n      }\n    ]\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "Unused current_user authentication check result",
+          "reason": "duplicate of 'Email update stores raw request body dictionary instead of email string'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 792,
+          "output_tokens": 474,
+          "latency_ms": 11996,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 793,
+          "output_tokens": 192,
+          "latency_ms": 6473,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 797,
+          "output_tokens": 9,
+          "latency_ms": 1432,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 19915.2,
+      "risk": "critical"
+    },
+    {
+      "id": "h05",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/reports.py",
+          "line": 24,
+          "category": "security",
+          "type": "path_traversal",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/reports.py",
+          "start_line": 23,
+          "end_line": 25,
+          "category": "security",
+          "severity": "critical",
+          "status": "confirmed",
+          "confidence": 0.95,
+          "title": "Path Traversal Vulnerability in read_report",
+          "source": "llm:bug"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Path Traversal Vulnerability in read_report",
+          "description": "The function read_report concatenates the user-supplied report name directly into the file path without validation, allowing path traversal attacks to read arbitrary system files.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/reports.py",
+          "start_line": 23,
+          "end_line": 25,
+          "comment_line": null,
+          "evidence": "def read_report(name: str) -> str:\n    with open(\"/var/shopapp/reports/\" + name) as handle:\n        return handle.read()",
+          "explanation": "Using user input directly in file paths via string concatenation enables directory traversal (e.g., passing '../../etc/passwd'), granting unauthorized read access to the filesystem.",
+          "suggested_fix": "Use pathlib to resolve and validate that the target path remains strictly within the intended directory:\nfrom pathlib import Path\n\ndef read_report(name: str) -> str:\n    base_dir = Path(\"/var/shopapp/reports\").resolve()\n    file_path = (base_dir / name).resolve()\n    if not file_path.is_relative_to(base_dir):\n        raise ValueError(\"Invalid report name\")\n    with open(file_path) as handle:\n        return handle.read()",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": false
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Path Traversal Vulnerability in read_report\",\n      \"description\": \"The function read_report concatenates the user-supplied report name directly into the file path without validation, allowing path traversal attacks to read arbitrary system files.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/reports.py\",\n      \"start_line\": 23,\n      \"end_line\": 25,\n      \"evidence\": \"def read_report(name: str) -> str:\\n    with open(\\\"/var/shopapp/reports/\\\" + name) as handle:\\n        return handle.read()\",\n      \"explanation\": \"Using user input directly in file paths via string concatenation enables directory traversal (e.g., passing '../../etc/passwd'), granting unauthorized read access to the filesystem.\",\n      \"suggested_fix\": \"Use pathlib to resolve and validate that the target path remains strictly within the intended directory:\\nfrom pathlib import Path\\n\\ndef read_report(name: str) -> str:\\n    base_dir = Path(\\\"/var/shopapp/reports\\\").resolve()\\n    file_path = (base_dir / name).resolve()\\n    if not file_path.is_relative_to(base_dir):\\n        raise ValueError(\\\"Invalid report name\\\")\\n    with open(file_path) as handle:\\n        return handle.read()\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 655,
+          "output_tokens": 346,
+          "latency_ms": 2569,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 660,
+          "output_tokens": 9,
+          "latency_ms": 2035,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 4615.9,
+      "risk": "critical"
+    },
+    {
+      "id": "h06",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/uploads.py",
+          "line": 23,
+          "category": "security",
+          "type": "path_traversal",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/uploads.py",
+          "start_line": 23,
+          "end_line": 23,
+          "category": "security",
+          "severity": "critical",
+          "status": "confirmed",
+          "confidence": 0.95,
+          "title": "Directory Traversal Vulnerability via Path Normalization",
+          "source": "llm:bug+llm:security"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Directory Traversal Vulnerability via Path Normalization",
+          "description": "Using os.path.normpath directly on user-supplied filenames allows attackers to pass relative paths containing '..' sequences (e.g., '../../etc/passwd') that can escape the UPLOAD_ROOT directory.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/uploads.py",
+          "start_line": 23,
+          "end_line": 23,
+          "comment_line": null,
+          "evidence": "path = UPLOAD_ROOT / os.path.normpath(filename)",
+          "explanation": "os.path.normpath collapses '..' segments but does not prevent the resulting path from traversing outside UPLOAD_ROOT if the filename starts with parent directory references.",
+          "suggested_fix": "path = (UPLOAD_ROOT / filename).resolve()\nif not path.is_relative_to(UPLOAD_ROOT.resolve()):\n    raise ValueError(\"invalid filename\")",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "Path Traversal Vulnerability in File Uploads",
+          "description": "Using os.path.normpath directly on the untrusted filename allows path traversal sequences like '../' to escape the UPLOAD_ROOT directory, permitting arbitrary file overwrites.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/uploads.py",
+          "start_line": 23,
+          "end_line": 23,
+          "comment_line": null,
+          "evidence": "path = UPLOAD_ROOT / os.path.normpath(filename)",
+          "explanation": "os.path.normpath does not prevent an attacker from supplying a filename with multiple leading '../' segments which can resolve to a path outside of UPLOAD_ROOT.",
+          "suggested_fix": "path = UPLOAD_ROOT / Path(filename).name",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Directory Traversal Vulnerability via Path Normalization\",\n      \"description\": \"Using os.path.normpath directly on user-supplied filenames allows attackers to pass relative paths containing '..' sequences (e.g., '../../etc/passwd') that can escape the UPLOAD_ROOT directory.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/uploads.py\",\n      \"start_line\": 23,\n      \"end_line\": 23,\n      \"evidence\": \"path = UPLOAD_ROOT / os.path.normpath(filename)\",\n      \"explanation\": \"os.path.normpath collapses '..' segments but does not prevent the resulting path from traversing outside UPLOAD_ROOT if the filename starts with parent directory references.\",\n      \"suggested_fix\": \"path = (UPLOAD_ROOT / filename).resolve()\\nif not path.is_relative_to(UPLOAD_ROOT.resolve()):\\n    raise ValueError(\\\"invalid filename\\\")\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Path Traversal Vulnerability in File Uploads\",\n      \"description\": \"Using os.path.normpath directly on the untrusted filename allows path traversal sequences like '../' to escape the UPLOAD_ROOT directory, permitting arbitrary file overwrites.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/uploads.py\",\n      \"start_line\": 23,\n      \"end_line\": 23,\n      \"evidence\": \"path = UPLOAD_ROOT / os.path.normpath(filename)\",\n      \"explanation\": \"os.path.normpath does not prevent an attacker from supplying a filename with multiple leading '../' segments which can resolve to a path outside of UPLOAD_ROOT.\",\n      \"suggested_fix\": \"path = UPLOAD_ROOT / Path(filename).name\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "Path Traversal Vulnerability in File Uploads",
+          "reason": "duplicate of 'Directory Traversal Vulnerability via Path Normalization'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 710,
+          "output_tokens": 254,
+          "latency_ms": 5921,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 711,
+          "output_tokens": 221,
+          "latency_ms": 6019,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 715,
+          "output_tokens": 9,
+          "latency_ms": 6343,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 18297.3,
+      "risk": "critical"
+    },
+    {
+      "id": "h07",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/notifications.py",
+          "line": 29,
+          "category": "security",
+          "type": "command_injection",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/notifications.py",
+          "start_line": 28,
+          "end_line": 29,
+          "category": "security",
+          "severity": "critical",
+          "status": "confirmed",
+          "confidence": 0.95,
+          "title": "Command Injection in mail host check",
+          "source": "llm:security+llm:bug+rule:SEC002+llm:quality"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Command injection vulnerability via unvalidated host parameter",
+          "description": "Using subprocess.call with shell=True and a formatted string containing the host parameter allows arbitrary shell command execution if the input is untrusted.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.9,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/notifications.py",
+          "start_line": 29,
+          "end_line": 29,
+          "comment_line": null,
+          "evidence": "return subprocess.call(f\"ping -c 1 {host}\", shell=True) == 0",
+          "explanation": "Passing shell=True with an f-string interpolating the 'host' argument creates a severe command injection vulnerability if any caller passes untrusted input.",
+          "suggested_fix": "return subprocess.call([\"ping\", \"-c\", \"1\", host]) == 0",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "Command Injection in mail host check",
+          "description": "Using subprocess.call with shell=True and an unvalidated host string passed via f-string allows arbitrary OS command execution if an attacker can control the host parameter.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/notifications.py",
+          "start_line": 28,
+          "end_line": 29,
+          "comment_line": null,
+          "evidence": "def check_mail_host(host: str) -> bool:\n     return subprocess.call(f\"ping -c 1 {host}\", shell=True) == 0",
+          "explanation": "Passing shell=True with formatted input strings enables command injection vulnerabilities.",
+          "suggested_fix": "Use subprocess.run(['ping', '-c', '1', host], shell=False) or validate the host input against a strict regex before passing it to the shell.",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "Use of shell=True with subprocess for host pinging",
+          "description": "Using shell=True with a formatted command string creates a potential security and maintainability risk, and subprocess execution should ideally be handled via a list of arguments or network libraries rather than shelling out to system ping.",
+          "category": "security",
+          "severity": "medium",
+          "confidence": 0.8,
+          "status": "possible",
+          "source": "llm:quality",
+          "file": "shopapp/notifications.py",
+          "start_line": 28,
+          "end_line": 29,
+          "comment_line": null,
+          "evidence": "def check_mail_host(host: str) -> bool:\n     return subprocess.call(f\"ping -c 1 {host}\", shell=True) == 0",
+          "explanation": "Shell execution with dynamically formatted input can lead to command injection if the host parameter is untrusted, and violates safe coding standards.",
+          "suggested_fix": "def check_mail_host(host: str) -> bool:\n     return subprocess.call([\"ping\", \"-c\", \"1\", host]) == 0",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Command injection vulnerability via unvalidated host parameter\",\n      \"description\": \"Using subprocess.call with shell=True and a formatted string containing the host parameter allows arbitrary shell command execution if the input is untrusted.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.9,\n      \"file\": \"shopapp/notifications.py\",\n      \"start_line\": 29,\n      \"end_line\": 29,\n      \"evidence\": \"return subprocess.call(f\\\"ping -c 1 {host}\\\", shell=True) == 0\",\n      \"explanation\": \"Passing shell=True with an f-string interpolating the 'host' argument creates a severe command injection vulnerability if any caller passes untrusted input.\",\n      \"suggested_fix\": \"return subprocess.call([\\\"ping\\\", \\\"-c\\\", \\\"1\\\", host]) == 0\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Command Injection in mail host check\",\n      \"description\": \"Using subprocess.call with shell=True and an unvalidated host string passed via f-string allows arbitrary OS command execution if an attacker can control the host parameter.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/notifications.py\",\n      \"start_line\": 28,\n      \"end_line\": 29,\n      \"evidence\": \"def check_mail_host(host: str) -> bool:\\n     return subprocess.call(f\\\"ping -c 1 {host}\\\", shell=True) == 0\",\n      \"explanation\": \"Passing shell=True with formatted input strings enables command injection vulnerabilities.\",\n      \"suggested_fix\": \"Use subprocess.run(['ping', '-c', '1', host], shell=False) or validate the host input against a strict regex before passing it to the shell.\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Use of shell=True with subprocess for host pinging\",\n      \"description\": \"Using shell=True with a formatted command string creates a potential security and maintainability risk, and subprocess execution should ideally be handled via a list of arguments or network libraries rather than shelling out to system ping.\",\n      \"category\": \"security\",\n      \"severity\": \"medium\",\n      \"confidence\": 0.8,\n      \"file\": \"shopapp/notifications.py\",\n      \"start_line\": 28,\n      \"end_line\": 29,\n      \"evidence\": \"def check_mail_host(host: str) -> bool:\\n     return subprocess.call(f\\\"ping -c 1 {host}\\\", shell=True) == 0\",\n      \"explanation\": \"Shell execution with dynamically formatted input can lead to command injection if the host parameter is untrusted, and violates safe coding standards.\",\n      \"suggested_fix\": \"def check_mail_host(host: str) -> bool:\\n     return subprocess.call([\\\"ping\\\", \\\"-c\\\", \\\"1\\\", host]) == 0\"\n    }\n  ]\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "Command injection vulnerability via unvalidated host parameter",
+          "reason": "duplicate of 'Command Injection in mail host check'"
+        },
+        {
+          "title": "Subprocess call with shell=True",
+          "reason": "duplicate of 'Command Injection in mail host check'"
+        },
+        {
+          "title": "Use of shell=True with subprocess for host pinging",
+          "reason": "duplicate of 'Command Injection in mail host check'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 730,
+          "output_tokens": 224,
+          "latency_ms": 23146,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 731,
+          "output_tokens": 241,
+          "latency_ms": 6232,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 735,
+          "output_tokens": 267,
+          "latency_ms": 2008,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 31401.8,
+      "risk": "critical"
+    },
+    {
+      "id": "h08",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/uploads.py",
+          "line": 30,
+          "category": "security",
+          "type": "command_injection",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/uploads.py",
+          "start_line": 29,
+          "end_line": 30,
+          "category": "bug",
+          "severity": "critical",
+          "status": "confirmed",
+          "confidence": 0.95,
+          "title": "Command Injection Vulnerability in make_thumbnail",
+          "source": "llm:bug+llm:security"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Command Injection Vulnerability in make_thumbnail",
+          "description": "Using shell=True via sh -c with unvalidated path and size arguments interpolated directly into the command string allows arbitrary command execution if filenames contain shell metacharacters.",
+          "category": "bug",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/uploads.py",
+          "start_line": 29,
+          "end_line": 30,
+          "comment_line": null,
+          "evidence": "def make_thumbnail(path: str, size: str) -> None:\n     subprocess.run([\"sh\", \"-c\", f\"convert {path} -resize {size} {path}.thumb.png\"], check=True)",
+          "explanation": "Interpolating user-supplied or file-derived variables (path, size) into a shell command string passed to 'sh -c' opens up a severe command injection vulnerability. It should avoid shell=True/sh -c and pass a list of arguments directly.",
+          "suggested_fix": "subprocess.run([\"convert\", path, \"-resize\", size, f\"{path}.thumb.png\"], check=True)",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "Command Injection in make_thumbnail",
+          "description": "Using subprocess.run with shell=True via a shell string interpolation allows arbitrary command injection if filename or size parameters are tainted.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/uploads.py",
+          "start_line": 30,
+          "end_line": 30,
+          "comment_line": null,
+          "evidence": "    subprocess.run([\"sh\", \"-c\", f\"convert {path} -resize {size} {path}.thumb.png\"], check=True)",
+          "explanation": "Passing an interpolated string to a shell execution context (sh -c) creates a major command injection vulnerability when any of the input variables (path or size) contain untrusted user data.",
+          "suggested_fix": "subprocess.run([\"convert\", path, \"-resize\", size, f\"{path}.thumb.png\"], check=True)",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Command Injection Vulnerability in make_thumbnail\",\n      \"description\": \"Using shell=True via sh -c with unvalidated path and size arguments interpolated directly into the command string allows arbitrary command execution if filenames contain shell metacharacters.\",\n      \"category\": \"bug\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/uploads.py\",\n      \"start_line\": 29,\n      \"end_line\": 30,\n      \"evidence\": \"def make_thumbnail(path: str, size: str) -> None:\\n     subprocess.run([\\\"sh\\\", \\\"-c\\\", f\\\"convert {path} -resize {size} {path}.thumb.png\\\"], check=True)\",\n      \"explanation\": \"Interpolating user-supplied or file-derived variables (path, size) into a shell command string passed to 'sh -c' opens up a severe command injection vulnerability. It should avoid shell=True/sh -c and pass a list of arguments directly.\",\n      \"suggested_fix\": \"subprocess.run([\\\"convert\\\", path, \\\"-resize\\\", size, f\\\"{path}.thumb.png\\\"], check=True)\",\n      \"context_refs\": []\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Command Injection in make_thumbnail\",\n      \"description\": \"Using subprocess.run with shell=True via a shell string interpolation allows arbitrary command injection if filename or size parameters are tainted.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/uploads.py\",\n      \"start_line\": 30,\n      \"end_line\": 30,\n      \"evidence\": \"    subprocess.run([\\\"sh\\\", \\\"-c\\\", f\\\"convert {path} -resize {size} {path}.thumb.png\\\"], check=True)\",\n      \"explanation\": \"Passing an interpolated string to a shell execution context (sh -c) creates a major command injection vulnerability when any of the input variables (path or size) contain untrusted user data.\",\n      \"suggested_fix\": \"subprocess.run([\\\"convert\\\", path, \\\"-resize\\\", size, f\\\"{path}.thumb.png\\\"], check=True)\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "Command Injection in make_thumbnail",
+          "reason": "duplicate of 'Command Injection Vulnerability in make_thumbnail'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 735,
+          "output_tokens": 296,
+          "latency_ms": 5621,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 736,
+          "output_tokens": 245,
+          "latency_ms": 9627,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 740,
+          "output_tokens": 9,
+          "latency_ms": 6077,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 21339.6,
+      "risk": "high"
+    },
+    {
+      "id": "h09",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/auth.py",
+          "line": 9,
+          "category": "security",
+          "type": "hardcoded_secret",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/auth.py",
+          "start_line": 9,
+          "end_line": 9,
+          "category": "security",
+          "severity": "high",
+          "status": "confirmed",
+          "confidence": 0.9,
+          "title": "Hardcoded JWT signing secret",
+          "source": "llm:security+rule:SEC007"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Hardcoded JWT signing secret",
+          "description": "A static secret string is hardcoded in the source code, which compromises token security if the source code is exposed or shared.",
+          "category": "security",
+          "severity": "high",
+          "confidence": 0.9,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/auth.py",
+          "start_line": 9,
+          "end_line": 9,
+          "comment_line": null,
+          "evidence": "JWT_SIGNING_SECRET = \"s3cr3t-signing-key-2026\"",
+          "explanation": "Hardcoding cryptographic secrets in plaintext allows anyone with access to the source code to forge valid signed tokens.",
+          "suggested_fix": "Load the signing secret from an environment variable, e.g., JWT_SIGNING_SECRET = os.environ.get(\"JWT_SIGNING_SECRET\")",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\"findings\": [{\"title\": \"Hardcoded JWT signing secret\", \"description\": \"A static secret string is hardcoded in the source code, which compromises token security if the source code is exposed or shared.\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": 0.9, \"file\": \"shopapp/auth.py\", \"start_line\": 9, \"end_line\": 9, \"evidence\": \"JWT_SIGNING_SECRET = \\\"s3cr3t-signing-key-2026\\\"\", \"explanation\": \"Hardcoding cryptographic secrets in plaintext allows anyone with access to the source code to forge valid signed tokens.\", \"suggested_fix\": \"Load the signing secret from an environment variable, e.g., JWT_SIGNING_SECRET = os.environ.get(\\\"JWT_SIGNING_SECRET\\\")\"}]}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "Hardcoded credential",
+          "reason": "duplicate of 'Hardcoded JWT signing secret'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 580,
+          "output_tokens": 9,
+          "latency_ms": 710,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 581,
+          "output_tokens": 183,
+          "latency_ms": 14894,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 585,
+          "output_tokens": 9,
+          "latency_ms": 1869,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 17490.1,
+      "risk": "high"
+    },
+    {
+      "id": "h10",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/storage.py",
+          "line": 3,
+          "category": "security",
+          "type": "hardcoded_secret",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/storage.py",
+          "start_line": 3,
+          "end_line": 3,
+          "category": "security",
+          "severity": "high",
+          "status": "confirmed",
+          "confidence": 0.9,
+          "title": "Hardcoded production database credentials",
+          "source": "llm:security"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Hardcoded production database credentials",
+          "description": "A sensitive database connection string containing a hardcoded password is stored directly in the source code.",
+          "category": "security",
+          "severity": "high",
+          "confidence": 0.9,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/storage.py",
+          "start_line": 3,
+          "end_line": 3,
+          "comment_line": null,
+          "evidence": "DEFAULT_DSN = \"postgresql://shop:Sup3rS3cret@db.internal:5432/shop\"",
+          "explanation": "Hardcoding credentials in source code exposes sensitive database access information to anyone with access to the repository, leading to potential unauthorized access.",
+          "suggested_fix": "Load the database DSN from environment variables using os.environ.get(\"DATABASE_DSN\").",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\"findings\": []}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Hardcoded production database credentials\",\n      \"description\": \"A sensitive database connection string containing a hardcoded password is stored directly in the source code.\",\n      \"category\": \"security\",\n      \"severity\": \"high\",\n      \"confidence\": 0.9,\n      \"file\": \"shopapp/storage.py\",\n      \"start_line\": 3,\n      \"end_line\": 3,\n      \"evidence\": \"DEFAULT_DSN = \\\"postgresql://shop:Sup3rS3cret@db.internal:5432/shop\\\"\",\n      \"explanation\": \"Hardcoding credentials in source code exposes sensitive database access information to anyone with access to the repository, leading to potential unauthorized access.\",\n      \"suggested_fix\": \"Load the database DSN from environment variables using os.environ.get(\\\"DATABASE_DSN\\\").\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 559,
+          "output_tokens": 5,
+          "latency_ms": 5456,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 560,
+          "output_tokens": 210,
+          "latency_ms": 8798,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 564,
+          "output_tokens": 9,
+          "latency_ms": 1150,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 15422.2,
+      "risk": "high"
+    },
+    {
+      "id": "h11",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/auth.py",
+          "line": 28,
+          "category": "security",
+          "type": "authentication",
+          "severity": "critical"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/auth.py",
+          "start_line": 28,
+          "end_line": 28,
+          "category": "security",
+          "severity": "critical",
+          "status": "confirmed",
+          "confidence": 0.99,
+          "title": "Guest session incorrectly assigned admin role",
+          "source": "llm:bug+llm:security"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Guest session incorrectly assigned admin role",
+          "description": "When a session token is not found, get_user_for_session returns a fallback guest user object with the 'admin' role, granting full administrative privileges to unauthenticated users.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.99,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/auth.py",
+          "start_line": 28,
+          "end_line": 28,
+          "comment_line": null,
+          "evidence": "return {\"id\": 0, \"email\": \"guest@example.com\", \"role\": \"admin\"}",
+          "explanation": "Assigning 'role': 'admin' to guest users presents a severe privilege escalation vulnerability, allowing any request with an invalid or missing session token to act as an administrator.",
+          "suggested_fix": "return {\"id\": 0, \"email\": \"guest@example.com\", \"role\": \"guest\"}",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "Hardcoded Admin Role for Guest Sessions",
+          "description": "When a session token is not found, the function returns a guest user dictionary with the 'admin' role, granting unauthorized administrator privileges to unauthenticated or invalid users.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.99,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/auth.py",
+          "start_line": 28,
+          "end_line": 28,
+          "comment_line": null,
+          "evidence": "return {\"id\": 0, \"email\": \"guest@example.com\", \"role\": \"admin\"}",
+          "explanation": "Giving an admin role to guest or invalid session tokens breaks access control and allows any user to gain full administrator privileges.",
+          "suggested_fix": "return {\"id\": 0, \"email\": \"guest@example.com\", \"role\": \"guest\"}",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Guest session incorrectly assigned admin role\",\n      \"description\": \"When a session token is not found, get_user_for_session returns a fallback guest user object with the 'admin' role, granting full administrative privileges to unauthenticated users.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.99,\n      \"file\": \"shopapp/auth.py\",\n      \"start_line\": 28,\n      \"end_line\": 28,\n      \"evidence\": \"return {\\\"id\\\": 0, \\\"email\\\": \\\"guest@example.com\\\", \\\"role\\\": \\\"admin\\\"}\",\n      \"explanation\": \"Assigning 'role': 'admin' to guest users presents a severe privilege escalation vulnerability, allowing any request with an invalid or missing session token to act as an administrator.\",\n      \"suggested_fix\": \"return {\\\"id\\\": 0, \\\"email\\\": \\\"guest@example.com\\\", \\\"role\\\": \\\"guest\\\"}\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Hardcoded Admin Role for Guest Sessions\",\n      \"description\": \"When a session token is not found, the function returns a guest user dictionary with the 'admin' role, granting unauthorized administrator privileges to unauthenticated or invalid users.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.99,\n      \"file\": \"shopapp/auth.py\",\n      \"start_line\": 28,\n      \"end_line\": 28,\n      \"evidence\": \"return {\\\"id\\\": 0, \\\"email\\\": \\\"guest@example.com\\\", \\\"role\\\": \\\"admin\\\"}\",\n      \"explanation\": \"Giving an admin role to guest or invalid session tokens breaks access control and allows any user to gain full administrator privileges.\",\n      \"suggested_fix\": \"return {\\\"id\\\": 0, \\\"email\\\": \\\"guest@example.com\\\", \\\"role\\\": \\\"guest\\\"}\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "Hardcoded Admin Role for Guest Sessions",
+          "reason": "duplicate of 'Guest session incorrectly assigned admin role'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 787,
+          "output_tokens": 241,
+          "latency_ms": 1854,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 788,
+          "output_tokens": 227,
+          "latency_ms": 2165,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 792,
+          "output_tokens": 9,
+          "latency_ms": 1294,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 5326.6,
+      "risk": "critical"
+    },
+    {
+      "id": "h12",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/orders.py",
+          "line": 34,
+          "category": "security",
+          "type": "authorization",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/orders.py",
+          "start_line": 34,
+          "end_line": 34,
+          "category": "security",
+          "severity": "critical",
+          "status": "confirmed",
+          "confidence": 0.95,
+          "title": "Inadequate authorization check allows customers to self-refund any order",
+          "source": "llm:security"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Inadequate authorization check allows customers to self-refund any order",
+          "description": "The authorization role check for the refund_order function was changed from 'support' to 'customer'. Since the function receives an arbitrary order object without validating that the authenticated user owns that order, any customer can now potentially trigger refunds for any order (IDOR vulnerability).",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/orders.py",
+          "start_line": 34,
+          "end_line": 34,
+          "comment_line": null,
+          "evidence": "    require_role(admin, \"customer\")",
+          "explanation": "Changing the role requirement from support staff to a customer, combined with the lack of ownership verification for the order argument, creates an insecure direct object reference vulnerability where users can refund arbitrary orders.",
+          "suggested_fix": "Verify that the customer owns the order before processing the refund, or restrict the function back to support/admin roles.",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Inadequate authorization check allows customers to self-refund any order\",\n      \"description\": \"The authorization role check for the refund_order function was changed from 'support' to 'customer'. Since the function receives an arbitrary order object without validating that the authenticated user owns that order, any customer can now potentially trigger refunds for any order (IDOR vulnerability).\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/orders.py\",\n      \"start_line\": 34,\n      \"end_line\": 34,\n      \"evidence\": \"    require_role(admin, \\\"customer\\\")\",\n      \"explanation\": \"Changing the role requirement from support staff to a customer, combined with the lack of ownership verification for the order argument, creates an insecure direct object reference vulnerability where users can refund arbitrary orders.\",\n      \"suggested_fix\": \"Verify that the customer owns the order before processing the refund, or restrict the function back to support/admin roles.\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 714,
+          "output_tokens": 9,
+          "latency_ms": 4910,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 715,
+          "output_tokens": 252,
+          "latency_ms": 18459,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 719,
+          "output_tokens": 9,
+          "latency_ms": 5171,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 28555.0,
+      "risk": "critical"
+    },
+    {
+      "id": "h13",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/reports.py",
+          "line": 10,
+          "category": "security",
+          "type": "authorization",
+          "severity": "medium"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 698,
+          "output_tokens": 9,
+          "latency_ms": 5176,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 699,
+          "output_tokens": 9,
+          "latency_ms": 5000,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 703,
+          "output_tokens": 9,
+          "latency_ms": 11996,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 22185.4,
+      "risk": "low"
+    },
+    {
+      "id": "h14",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/api.py",
+          "line": 28,
+          "category": "security",
+          "type": "deserialization",
+          "severity": "critical"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/api.py",
+          "start_line": 28,
+          "end_line": 28,
+          "category": "security",
+          "severity": "critical",
+          "status": "confirmed",
+          "confidence": 1.0,
+          "title": "Insecure Deserialization via pickle",
+          "source": "llm:bug+llm:security+rule:SEC004"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Insecure Deserialization via pickle",
+          "description": "Using pickle.loads on HTTP request body allows arbitrary code execution and is a severe security vulnerability.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 1.0,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/api.py",
+          "start_line": 28,
+          "end_line": 28,
+          "comment_line": null,
+          "evidence": "settings = pickle.loads(request[\"body\"])",
+          "explanation": "Deserializing untrusted input using the pickle module can lead to arbitrary code execution. HTTP request bodies should never be parsed with pickle.",
+          "suggested_fix": "Use a safe serialization format like json instead of pickle.",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": false
+        },
+        {
+          "title": "Unsafe deserialization using pickle",
+          "description": "The application deserializes user-controlled request bodies using Python's 'pickle' module, which can lead to arbitrary code execution vulnerabilities.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 1.0,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/api.py",
+          "start_line": 28,
+          "end_line": 28,
+          "comment_line": null,
+          "evidence": "settings = pickle.loads(request[\"body\"])",
+          "explanation": "Using pickle.loads on untrusted input allows an attacker to construct malicious serialized data that executes arbitrary Python code when unpickled.",
+          "suggested_fix": "Use a safe serialization format such as json.loads() instead of pickle.",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": false
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Insecure Deserialization via pickle\",\n      \"description\": \"Using pickle.loads on HTTP request body allows arbitrary code execution and is a severe security vulnerability.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 1.0,\n      \"file\": \"shopapp/api.py\",\n      \"start_line\": 28,\n      \"end_line\": 28,\n      \"evidence\": \"settings = pickle.loads(request[\\\"body\\\"])\",\n      \"explanation\": \"Deserializing untrusted input using the pickle module can lead to arbitrary code execution. HTTP request bodies should never be parsed with pickle.\",\n      \"suggested_fix\": \"Use a safe serialization format like json instead of pickle.\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Unsafe deserialization using pickle\",\n      \"description\": \"The application deserializes user-controlled request bodies using Python's 'pickle' module, which can lead to arbitrary code execution vulnerabilities.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 1.0,\n      \"file\": \"shopapp/api.py\",\n      \"start_line\": 28,\n      \"end_line\": 28,\n      \"evidence\": \"settings = pickle.loads(request[\\\"body\\\"])\",\n      \"explanation\": \"Using pickle.loads on untrusted input allows an attacker to construct malicious serialized data that executes arbitrary Python code when unpickled.\",\n      \"suggested_fix\": \"Use a safe serialization format such as json.loads() instead of pickle.\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\"findings\": []}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "Unsafe deserialization using pickle",
+          "reason": "duplicate of 'Insecure Deserialization via pickle'"
+        },
+        {
+          "title": "Unsafe deserialization",
+          "reason": "duplicate of 'Insecure Deserialization via pickle'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 737,
+          "output_tokens": 189,
+          "latency_ms": 9590,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 738,
+          "output_tokens": 200,
+          "latency_ms": 1972,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 742,
+          "output_tokens": 5,
+          "latency_ms": 4809,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 16387.3,
+      "risk": "critical"
+    },
+    {
+      "id": "h15",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/api.py",
+          "line": 32,
+          "category": "security",
+          "type": "ssrf",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/api.py",
+          "start_line": 32,
+          "end_line": 32,
+          "category": "security",
+          "severity": "critical",
+          "status": "confirmed",
+          "confidence": 0.95,
+          "title": "Removal of webhook host validation introduces Server-Side Request Forgery vulnerability",
+          "source": "llm:bug+llm:security"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Removal of webhook host validation introduces Server-Side Request Forgery vulnerability",
+          "description": "The check restricting webhook URLs to ALLOWED_WEBHOOK_HOSTS has been completely removed. This allows arbitrary URLs to be passed to urllib.request.urlopen, enabling potential Server-Side Request Forgery (SSRF) attacks.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/api.py",
+          "start_line": 32,
+          "end_line": 32,
+          "comment_line": null,
+          "evidence": "    url = url.strip()",
+          "explanation": "By removing the host validation check against ALLOWED_WEBHOOK_HOSTS, any URL can now be queried by the server, potentially exposing internal services or external unintended endpoints.",
+          "suggested_fix": "Restore the host validation check: host = urlparse(url).hostname; if host not in ALLOWED_WEBHOOK_HOSTS: raise ValueError(\"webhook host not allowed\")",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "Server-Side Request Forgery (SSRF) vulnerability due to removed URL host validation",
+          "description": "The removal of ALLOWED_WEBHOOK_HOSTS validation allows arbitrary URLs to be passed to urllib.request.urlopen. This introduces a Server-Side Request Forgery (SSRF) vulnerability, enabling attackers to make internal network requests or access sensitive metadata services.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/api.py",
+          "start_line": 32,
+          "end_line": 34,
+          "comment_line": null,
+          "evidence": "    url = url.strip()\n    data = json.dumps(payload).encode()\n    with urllib.request.urlopen(urllib.request.Request(url, data=data), timeout=5) as response:",
+          "explanation": "Accepting arbitrary URLs without host validation allows users or payloads to specify internal or restricted IP addresses (such as localhost, 169.254.169.254), leading to SSRF.",
+          "suggested_fix": "Re-introduce host validation against an explicit whitelist of allowed webhook hosts before making the request.",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Removal of webhook host validation introduces Server-Side Request Forgery vulnerability\",\n      \"description\": \"The check restricting webhook URLs to ALLOWED_WEBHOOK_HOSTS has been completely removed. This allows arbitrary URLs to be passed to urllib.request.urlopen, enabling potential Server-Side Request Forgery (SSRF) attacks.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/api.py\",\n      \"start_line\": 32,\n      \"end_line\": 32,\n      \"evidence\": \"    url = url.strip()\",\n      \"explanation\": \"By removing the host validation check against ALLOWED_WEBHOOK_HOSTS, any URL can now be queried by the server, potentially exposing internal services or external unintended endpoints.\",\n      \"suggested_fix\": \"Restore the host validation check: host = urlparse(url).hostname; if host not in ALLOWED_WEBHOOK_HOSTS: raise ValueError(\\\"webhook host not allowed\\\")\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Server-Side Request Forgery (SSRF) vulnerability due to removed URL host validation\",\n      \"description\": \"The removal of ALLOWED_WEBHOOK_HOSTS validation allows arbitrary URLs to be passed to urllib.request.urlopen. This introduces a Server-Side Request Forgery (SSRF) vulnerability, enabling attackers to make internal network requests or access sensitive metadata services.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/api.py\",\n      \"start_line\": 32,\n      \"end_line\": 34,\n      \"evidence\": \"    url = url.strip()\\n    data = json.dumps(payload).encode()\\n    with urllib.request.urlopen(urllib.request.Request(url, data=data), timeout=5) as response:\",\n      \"explanation\": \"Accepting arbitrary URLs without host validation allows users or payloads to specify internal or restricted IP addresses (such as localhost, 169.254.169.254), leading to SSRF.\",\n      \"suggested_fix\": \"Re-introduce host validation against an explicit whitelist of allowed webhook hosts before making the request.\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "Server-Side Request Forgery (SSRF) vulnerability due to removed URL host validation",
+          "reason": "duplicate of 'Removal of webhook host validation introduces Server-Side Request Forgery vulnerability'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 742,
+          "output_tokens": 255,
+          "latency_ms": 9382,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 743,
+          "output_tokens": 295,
+          "latency_ms": 15085,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 747,
+          "output_tokens": 9,
+          "latency_ms": 1290,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 25772.9,
+      "risk": "critical"
+    },
+    {
+      "id": "h16",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/auth.py",
+          "line": 12,
+          "category": "security",
+          "type": "weak_crypto",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/auth.py",
+          "start_line": 12,
+          "end_line": 12,
+          "category": "security",
+          "severity": "critical",
+          "status": "confirmed",
+          "confidence": 1.0,
+          "title": "Insecure cryptographic hash function (MD5) used for passwords",
+          "source": "llm:bug+llm:security+llm:quality+rule:SEC009"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Insecure cryptographic hash function (MD5) used for passwords",
+          "description": "The function hash_password was updated to use MD5 instead of PBKDF2. MD5 is cryptographically broken and completely unsuitable for password hashing as it can be easily cracked.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 1.0,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/auth.py",
+          "start_line": 12,
+          "end_line": 12,
+          "comment_line": null,
+          "evidence": "        return hashlib.md5(salt + password.encode()).digest()",
+          "explanation": "MD5 is vulnerable to collision attacks and is too fast to compute, making brute-force password cracking trivial. Passwords should use a slow key derivation function like PBKDF2, bcrypt, or Argon2.",
+          "suggested_fix": "return hashlib.pbkdf2_hmac(\"sha256\", password.encode(), salt, 600_000)",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "Use of cryptographically weak MD5 for password hashing",
+          "description": "The password hashing function has been changed from PBKDF2 to MD5. MD5 is broken and cryptographically weak, making stored passwords trivial to crack using modern hardware or precalculated rainbow tables.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 1.0,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/auth.py",
+          "start_line": 12,
+          "end_line": 12,
+          "comment_line": null,
+          "evidence": "return hashlib.md5(salt + password.encode()).digest()",
+          "explanation": "MD5 is obsolete and insecure for password hashing. An attacker who steals the password database can easily crack the hashes.",
+          "suggested_fix": "return hashlib.pbkdf2_hmac(\"sha256\", password.encode(), salt, 600_000)",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "Use of cryptographically broken MD5 hashing",
+          "description": "The password hashing implementation uses MD5, which is completely broken cryptographically and vulnerable to collision and preimage attacks. Passwords should use a secure hashing algorithm like PBKDF2, Argon2, or bcrypt.",
+          "category": "security",
+          "severity": "critical",
+          "confidence": 1.0,
+          "status": "possible",
+          "source": "llm:quality",
+          "file": "shopapp/auth.py",
+          "start_line": 12,
+          "end_line": 12,
+          "comment_line": null,
+          "evidence": "return hashlib.md5(salt + password.encode()).digest()",
+          "explanation": "MD5 is obsolete and insecure for storing passwords. The previous implementation used pbkdf2_hmac with 200,000 iterations, which was much more secure.",
+          "suggested_fix": "return hashlib.pbkdf2_hmac(\"sha256\", password.encode(), salt, 200_000)",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\"findings\": [{\"title\": \"Insecure cryptographic hash function (MD5) used for passwords\", \"description\": \"The function hash_password was updated to use MD5 instead of PBKDF2. MD5 is cryptographically broken and completely unsuitable for password hashing as it can be easily cracked.\", \"category\": \"security\", \"severity\": \"critical\", \"confidence\": 1.0, \"file\": \"shopapp/auth.py\", \"start_line\": 12, \"end_line\": 12, \"evidence\": \"        return hashlib.md5(salt + password.encode()).digest()\", \"explanation\": \"MD5 is vulnerable to collision attacks and is too fast to compute, making brute-force password cracking trivial. Passwords should use a slow key derivation function like PBKDF2, bcrypt, or Argon2.\", \"suggested_fix\": \"return hashlib.pbkdf2_hmac(\\\"sha256\\\", password.encode(), salt, 600_000)\"}]}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Use of cryptographically weak MD5 for password hashing\",\n      \"description\": \"The password hashing function has been changed from PBKDF2 to MD5. MD5 is broken and cryptographically weak, making stored passwords trivial to crack using modern hardware or precalculated rainbow tables.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 1.0,\n      \"file\": \"shopapp/auth.py\",\n      \"start_line\": 12,\n      \"end_line\": 12,\n      \"evidence\": \"return hashlib.md5(salt + password.encode()).digest()\",\n      \"explanation\": \"MD5 is obsolete and insecure for password hashing. An attacker who steals the password database can easily crack the hashes.\",\n      \"suggested_fix\": \"return hashlib.pbkdf2_hmac(\\\"sha256\\\", password.encode(), salt, 600_000)\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Use of cryptographically broken MD5 hashing\",\n      \"description\": \"The password hashing implementation uses MD5, which is completely broken cryptographically and vulnerable to collision and preimage attacks. Passwords should use a secure hashing algorithm like PBKDF2, Argon2, or bcrypt.\",\n      \"category\": \"security\",\n      \"severity\": \"critical\",\n      \"confidence\": 1.0,\n      \"file\": \"shopapp/auth.py\",\n      \"start_line\": 12,\n      \"end_line\": 12,\n      \"evidence\": \"return hashlib.md5(salt + password.encode()).digest()\",\n      \"explanation\": \"MD5 is obsolete and insecure for storing passwords. The previous implementation used pbkdf2_hmac with 200,000 iterations, which was much more secure.\",\n      \"suggested_fix\": \"return hashlib.pbkdf2_hmac(\\\"sha256\\\", password.encode(), salt, 200_000)\"\n    }\n  ]\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "Use of cryptographically weak MD5 for password hashing",
+          "reason": "duplicate of 'Insecure cryptographic hash function (MD5) used for passwords'"
+        },
+        {
+          "title": "Use of cryptographically broken MD5 hashing",
+          "reason": "duplicate of 'Insecure cryptographic hash function (MD5) used for passwords'"
+        },
+        {
+          "title": "Weak hash function",
+          "reason": "duplicate of 'Insecure cryptographic hash function (MD5) used for passwords'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 671,
+          "output_tokens": 217,
+          "latency_ms": 5246,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 672,
+          "output_tokens": 233,
+          "latency_ms": 5264,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 676,
+          "output_tokens": 248,
+          "latency_ms": 5531,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 16057.0,
+      "risk": "critical"
+    },
+    {
+      "id": "h17",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/billing.py",
+          "line": 8,
+          "category": "bug",
+          "type": "logic",
+          "severity": "high"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/billing.py",
+          "start_line": 8,
+          "end_line": 9,
+          "category": "bug",
+          "severity": "medium",
+          "status": "possible",
+          "confidence": 1.0,
+          "title": "Inverted coupon check logic causes discounts to be ignored",
+          "source": "llm:bug+llm:quality"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Inverted coupon check logic causes discounts to be ignored",
+          "description": "The condition checking if a coupon code is present was inverted from checking if not coupon_code to checking if coupon_code, causing the function to immediately return 0 when a coupon is provided instead of applying it.",
+          "category": "bug",
+          "severity": "high",
+          "confidence": 1.0,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/billing.py",
+          "start_line": 8,
+          "end_line": 9,
+          "comment_line": null,
+          "evidence": "    if coupon_code:\n        return 0",
+          "explanation": "When a coupon code is supplied, the function should look up its discount percentage rather than returning 0 immediately. Conversely, if there is no coupon code, it should return 0.",
+          "suggested_fix": "    if not coupon_code:\n        return 0",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "Incorrect coupon validation logic inverses discount application",
+          "description": "The logic change checks if coupon_code is present and immediately returns 0, meaning coupons never apply any discount and non-coupon or missing coupons would trigger subsequent discount logic.",
+          "category": "security",
+          "severity": "medium",
+          "confidence": 0.9,
+          "status": "possible",
+          "source": "llm:security",
+          "file": "shopapp/billing.py",
+          "start_line": 8,
+          "end_line": 9,
+          "comment_line": null,
+          "evidence": "    8 +     if coupon_code:\n    9           return 0",
+          "explanation": "The inverted condition 'if coupon_code:' bypasses discount lookup when a coupon is actually provided, effectively breaking coupon functionality or causing unexpected behavior.",
+          "suggested_fix": "    if not coupon_code:\n        return 0",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        },
+        {
+          "title": "Incorrect logic inversion in coupon check",
+          "description": "The condition checking for the presence of coupon_code was inverted, causing discounts to be skipped when a coupon is provided and evaluated when it is missing.",
+          "category": "bug",
+          "severity": "high",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:quality",
+          "file": "shopapp/billing.py",
+          "start_line": 8,
+          "end_line": 9,
+          "comment_line": null,
+          "evidence": "if coupon_code:\n          return 0",
+          "explanation": "Checking 'if coupon_code:' and returning 0 means any valid coupon will give 0 discount, whereas the previous logic 'if not coupon_code: return 0' correctly exited early when no coupon was provided.",
+          "suggested_fix": "if not coupon_code:\n          return 0",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": true
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Inverted coupon check logic causes discounts to be ignored\",\n      \"description\": \"The condition checking if a coupon code is present was inverted from checking if not coupon_code to checking if coupon_code, causing the function to immediately return 0 when a coupon is provided instead of applying it.\",\n      \"category\": \"bug\",\n      \"severity\": \"high\",\n      \"confidence\": 1.0,\n      \"file\": \"shopapp/billing.py\",\n      \"start_line\": 8,\n      \"end_line\": 9,\n      \"evidence\": \"    if coupon_code:\\n        return 0\",\n      \"explanation\": \"When a coupon code is supplied, the function should look up its discount percentage rather than returning 0 immediately. Conversely, if there is no coupon code, it should return 0.\",\n      \"suggested_fix\": \"    if not coupon_code:\\n        return 0\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\"findings\": [{\"title\": \"Incorrect coupon validation logic inverses discount application\", \"description\": \"The logic change checks if coupon_code is present and immediately returns 0, meaning coupons never apply any discount and non-coupon or missing coupons would trigger subsequent discount logic.\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": 0.9, \"file\": \"shopapp/billing.py\", \"start_line\": 8, \"end_line\": 9, \"evidence\": \"    8 +     if coupon_code:\\n    9           return 0\", \"explanation\": \"The inverted condition 'if coupon_code:' bypasses discount lookup when a coupon is actually provided, effectively breaking coupon functionality or causing unexpected behavior.\", \"suggested_fix\": \"    if not coupon_code:\\n        return 0\"}]}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Incorrect logic inversion in coupon check\",\n      \"description\": \"The condition checking for the presence of coupon_code was inverted, causing discounts to be skipped when a coupon is provided and evaluated when it is missing.\",\n      \"category\": \"bug\",\n      \"severity\": \"high\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/billing.py\",\n      \"start_line\": 8,\n      \"end_line\": 9,\n      \"evidence\": \"if coupon_code:\\n          return 0\",\n      \"explanation\": \"Checking 'if coupon_code:' and returning 0 means any valid coupon will give 0 discount, whereas the previous logic 'if not coupon_code: return 0' correctly exited early when no coupon was provided.\",\n      \"suggested_fix\": \"if not coupon_code:\\n          return 0\"\n    }\n  ]\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "Incorrect coupon validation logic inverses discount application",
+          "reason": "evidence not found in the file (unverifiable)"
+        },
+        {
+          "title": "Incorrect logic inversion in coupon check",
+          "reason": "duplicate of 'Inverted coupon check logic causes discounts to be ignored'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 711,
+          "output_tokens": 226,
+          "latency_ms": 5968,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 712,
+          "output_tokens": 176,
+          "latency_ms": 17268,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 716,
+          "output_tokens": 216,
+          "latency_ms": 1265,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 24514.2,
+      "risk": "medium"
+    },
+    {
+      "id": "h18",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/inventory.py",
+          "line": 15,
+          "category": "bug",
+          "type": "logic",
+          "severity": "medium"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/inventory.py",
+          "start_line": 15,
+          "end_line": 18,
+          "category": "bug",
+          "severity": "medium",
+          "status": "possible",
+          "confidence": 0.8,
+          "title": "Stock quantity update allows negative stock values",
+          "source": "llm:bug"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Stock quantity update allows negative stock values",
+          "description": "By allowing a quantity that exceeds available stock by 1, the subsequent update statement can decrement the stock below zero, leading to negative inventory levels.",
+          "category": "bug",
+          "severity": "medium",
+          "confidence": 0.8,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/inventory.py",
+          "start_line": 15,
+          "end_line": 18,
+          "comment_line": null,
+          "evidence": "if item[\"quantity\"] > available + 1:\n              raise ValueError(f\"only {available} left of product {item['product_id']}\")\n      for item in items:\n          db.execute(\"UPDATE stock SET quantity = quantity - %s WHERE product_id = %s\",\n                     (item[\"quantity\"], item[\"product_id\"]))\n",
+          "explanation": "Reserving an item quantity greater than the available stock plus one permits reserving more items than actually exist. When the database quantity is updated by subtracting item['quantity'], it will result in a negative stock count.",
+          "suggested_fix": "Revert the change to ensure items cannot be reserved beyond available stock, or ensure stock is clamped at zero during update.",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": false
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Stock quantity update allows negative stock values\",\n      \"description\": \"By allowing a quantity that exceeds available stock by 1, the subsequent update statement can decrement the stock below zero, leading to negative inventory levels.\",\n      \"category\": \"bug\",\n      \"severity\": \"medium\",\n      \"confidence\": 0.8,\n      \"file\": \"shopapp/inventory.py\",\n      \"start_line\": 15,\n      \"end_line\": 18,\n      \"evidence\": \"if item[\\\"quantity\\\"] > available + 1:\\n              raise ValueError(f\\\"only {available} left of product {item['product_id']}\\\")\\n      for item in items:\\n          db.execute(\\\"UPDATE stock SET quantity = quantity - %s WHERE product_id = %s\\\",\\n                     (item[\\\"quantity\\\"], item[\\\"product_id\\\"]))\\n\",\n      \"explanation\": \"Reserving an item quantity greater than the available stock plus one permits reserving more items than actually exist. When the database quantity is updated by subtracting item['quantity'], it will result in a negative stock count.\",\n      \"suggested_fix\": \"Revert the change to ensure items cannot be reserved beyond available stock, or ensure stock is clamped at zero during update.\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 799,
+          "output_tokens": 301,
+          "latency_ms": 5109,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 804,
+          "output_tokens": 9,
+          "latency_ms": 1136,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 6257.1,
+      "risk": "low"
+    },
+    {
+      "id": "h19",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/orders.py",
+          "line": 11,
+          "category": "bug",
+          "type": "logic",
+          "severity": "medium"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/orders.py",
+          "start_line": 11,
+          "end_line": 11,
+          "category": "bug",
+          "severity": "high",
+          "status": "confirmed",
+          "confidence": 0.95,
+          "title": "Empty items list causes failure in order creation",
+          "source": "llm:bug"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "Empty items list causes failure in order creation",
+          "description": "Changing the check from `not items` to `items is None` allows empty lists to pass through validation, causing subsequent errors when calculating the order total or inserting an order with no items.",
+          "category": "bug",
+          "severity": "high",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/orders.py",
+          "start_line": 11,
+          "end_line": 11,
+          "comment_line": null,
+          "evidence": "if items is None:",
+          "explanation": "The function expects at least one item as checked by the error message 'an order needs at least one item'. If an empty list `[]` is passed, `items is None` evaluates to False, unlike `not items`, leading to bugs downstream.",
+          "suggested_fix": "if not items:",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": false
+        },
+        {
+          "title": "Incorrect validation check for empty items list",
+          "description": "Changing the check from `not items` to `items is None` means an empty list `[]` will no longer be caught by the validation, leading to potential downstream issues when calculating order totals or inserting empty orders.",
+          "category": "quality",
+          "severity": "medium",
+          "confidence": 0.9,
+          "status": "possible",
+          "source": "llm:quality",
+          "file": "shopapp/orders.py",
+          "start_line": 11,
+          "end_line": 12,
+          "comment_line": null,
+          "evidence": "+     if items is None:\n           raise ValueError(\"an order needs at least one item\")",
+          "explanation": "The error message explicitly states that an order needs at least one item, but checking only for `None` allows an empty list `[]` to pass through, contrary to what the original check (`not items`) provided.",
+          "suggested_fix": "if not items:\n          raise ValueError(\"an order needs at least one item\")",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": false
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Empty items list causes failure in order creation\",\n      \"description\": \"Changing the check from `not items` to `items is None` allows empty lists to pass through validation, causing subsequent errors when calculating the order total or inserting an order with no items.\",\n      \"category\": \"bug\",\n      \"severity\": \"high\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/orders.py\",\n      \"start_line\": 11,\n      \"end_line\": 11,\n      \"evidence\": \"if items is None:\",\n      \"explanation\": \"The function expects at least one item as checked by the error message 'an order needs at least one item'. If an empty list `[]` is passed, `items is None` evaluates to False, unlike `not items`, leading to bugs downstream.\",\n      \"suggested_fix\": \"if not items:\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Incorrect validation check for empty items list\",\n      \"description\": \"Changing the check from `not items` to `items is None` means an empty list `[]` will no longer be caught by the validation, leading to potential downstream issues when calculating order totals or inserting empty orders.\",\n      \"category\": \"quality\",\n      \"severity\": \"medium\",\n      \"confidence\": 0.9,\n      \"file\": \"shopapp/orders.py\",\n      \"start_line\": 11,\n      \"end_line\": 12,\n      \"evidence\": \"+     if items is None:\\n           raise ValueError(\\\"an order needs at least one item\\\")\",\n      \"explanation\": \"The error message explicitly states that an order needs at least one item, but checking only for `None` allows an empty list `[]` to pass through, contrary to what the original check (`not items`) provided.\",\n      \"suggested_fix\": \"if not items:\\n          raise ValueError(\\\"an order needs at least one item\\\")\"\n    }\n  ]\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "Incorrect validation check for empty items list",
+          "reason": "evidence not found in the file (unverifiable)"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 812,
+          "output_tokens": 220,
+          "latency_ms": 5250,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 817,
+          "output_tokens": 248,
+          "latency_ms": 2973,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 8235.1,
+      "risk": "medium"
+    },
+    {
+      "id": "h20",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/reports.py",
+          "line": 16,
+          "category": "bug",
+          "type": "error_handling",
+          "severity": "medium"
+        }
+      ],
+      "predicted": [
+        {
+          "file": "shopapp/reports.py",
+          "start_line": 16,
+          "end_line": 16,
+          "category": "bug",
+          "severity": "high",
+          "status": "confirmed",
+          "confidence": 0.95,
+          "title": "IndexError on empty list input in CSV export",
+          "source": "llm:bug+llm:quality"
+        }
+      ],
+      "raw_model_findings": [
+        {
+          "title": "IndexError on empty list input in CSV export",
+          "description": "Accessing rows[0] when the input list is empty will raise an IndexError.",
+          "category": "bug",
+          "severity": "high",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/reports.py",
+          "start_line": 16,
+          "end_line": 16,
+          "comment_line": null,
+          "evidence": "writer = csv.DictWriter(buffer, fieldnames=list(rows[0]))",
+          "explanation": "If rows is an empty list, rows[0] raises IndexError. Previously, this was guarded by an 'if rows:' check which has been removed.",
+          "suggested_fix": "if not rows:\n    return \"\"\nwriter = csv.DictWriter(buffer, fieldnames=list(rows[0]))",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": false
+        },
+        {
+          "title": "Missing check for empty rows list",
+          "description": "Accessing rows[0] when the rows list is empty will raise an IndexError.",
+          "category": "quality",
+          "severity": "medium",
+          "confidence": 0.9,
+          "status": "possible",
+          "source": "llm:quality",
+          "file": "shopapp/reports.py",
+          "start_line": 16,
+          "end_line": 16,
+          "comment_line": null,
+          "evidence": "writer = csv.DictWriter(buffer, fieldnames=list(rows[0]))",
+          "explanation": "If an empty list is passed to export_csv, rows[0] will fail with an IndexError since there are no elements in the list.",
+          "suggested_fix": "if not rows:\n        return \"\"\n    writer = csv.DictWriter(buffer, fieldnames=list(rows[0]))",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": false
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"IndexError on empty list input in CSV export\",\n      \"description\": \"Accessing rows[0] when the input list is empty will raise an IndexError.\",\n      \"category\": \"bug\",\n      \"severity\": \"high\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/reports.py\",\n      \"start_line\": 16,\n      \"end_line\": 16,\n      \"evidence\": \"writer = csv.DictWriter(buffer, fieldnames=list(rows[0]))\",\n      \"explanation\": \"If rows is an empty list, rows[0] raises IndexError. Previously, this was guarded by an 'if rows:' check which has been removed.\",\n      \"suggested_fix\": \"if not rows:\\n    return \\\"\\\"\\nwriter = csv.DictWriter(buffer, fieldnames=list(rows[0]))\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Missing check for empty rows list\",\n      \"description\": \"Accessing rows[0] when the rows list is empty will raise an IndexError.\",\n      \"category\": \"quality\",\n      \"severity\": \"medium\",\n      \"confidence\": 0.9,\n      \"file\": \"shopapp/reports.py\",\n      \"start_line\": 16,\n      \"end_line\": 16,\n      \"evidence\": \"writer = csv.DictWriter(buffer, fieldnames=list(rows[0]))\",\n      \"explanation\": \"If an empty list is passed to export_csv, rows[0] will fail with an IndexError since there are no elements in the list.\",\n      \"suggested_fix\": \"if not rows:\\n        return \\\"\\\"\\n    writer = csv.DictWriter(buffer, fieldnames=list(rows[0]))\"\n    }\n  ]\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "Missing check for empty rows list",
+          "reason": "duplicate of 'IndexError on empty list input in CSV export'"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 741,
+          "output_tokens": 219,
+          "latency_ms": 6166,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 746,
+          "output_tokens": 214,
+          "latency_ms": 11498,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 17674.4,
+      "risk": "medium"
+    },
+    {
+      "id": "h21",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [
+        {
+          "file": "shopapp/inventory.py",
+          "line": 9,
+          "category": "bug",
+          "type": "error_handling",
+          "severity": "medium"
+        }
+      ],
+      "predicted": [],
+      "raw_model_findings": [
+        {
+          "title": "TypeError when product stock row is missing",
+          "description": "Removing the check for whether row exists will cause a TypeError ('TypeError: 'NoneType' object is not subscriptable') if get_stock is called for a product ID that does not exist in the database.",
+          "category": "bug",
+          "severity": "high",
+          "confidence": 0.95,
+          "status": "possible",
+          "source": "llm:bug",
+          "file": "shopapp/inventory.py",
+          "start_line": 9,
+          "end_line": 9,
+          "comment_line": null,
+          "evidence": "    9 +     return row[\"quantity\"]",
+          "explanation": "When db.fetch_one returns None (no row found), trying to access row['quantity'] will raise a TypeError instead of returning 0.",
+          "suggested_fix": "    return row[\"quantity\"] if row else 0",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": false
+        },
+        {
+          "title": "Potential TypeError on missing database row",
+          "description": "Removing the check for whether row exists will cause a TypeError when `fetch_one` returns None for a non-existent product_id.",
+          "category": "quality",
+          "severity": "medium",
+          "confidence": 0.9,
+          "status": "possible",
+          "source": "llm:quality",
+          "file": "shopapp/inventory.py",
+          "start_line": 9,
+          "end_line": 9,
+          "comment_line": null,
+          "evidence": "    9 +     return row[\"quantity\"]",
+          "explanation": "If `db.fetch_one` returns None because no record matches the product_id, attempting to subscript `row['quantity']` will raise a TypeError. The fallback to 0 was previously handling this safely.",
+          "suggested_fix": "    return row[\"quantity\"] if row else 0",
+          "context_refs": [],
+          "evidence_verified": false,
+          "in_changed_lines": false,
+          "sensitive_file": false
+        }
+      ],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"TypeError when product stock row is missing\",\n      \"description\": \"Removing the check for whether row exists will cause a TypeError ('TypeError: 'NoneType' object is not subscriptable') if get_stock is called for a product ID that does not exist in the database.\",\n      \"category\": \"bug\",\n      \"severity\": \"high\",\n      \"confidence\": 0.95,\n      \"file\": \"shopapp/inventory.py\",\n      \"start_line\": 9,\n      \"end_line\": 9,\n      \"evidence\": \"    9 +     return row[\\\"quantity\\\"]\",\n      \"explanation\": \"When db.fetch_one returns None (no row found), trying to access row['quantity'] will raise a TypeError instead of returning 0.\",\n      \"suggested_fix\": \"    return row[\\\"quantity\\\"] if row else 0\"\n    }\n  ]\n}"
+        ],
+        [
+          "{\n  \"findings\": [\n    {\n      \"title\": \"Potential TypeError on missing database row\",\n      \"description\": \"Removing the check for whether row exists will cause a TypeError when `fetch_one` returns None for a non-existent product_id.\",\n      \"category\": \"quality\",\n      \"severity\": \"medium\",\n      \"confidence\": 0.9,\n      \"file\": \"shopapp/inventory.py\",\n      \"start_line\": 9,\n      \"end_line\": 9,\n      \"evidence\": \"    9 +     return row[\\\"quantity\\\"]\",\n      \"explanation\": \"If `db.fetch_one` returns None because no record matches the product_id, attempting to subscript `row['quantity']` will raise a TypeError. The fallback to 0 was previously handling this safely.\",\n      \"suggested_fix\": \"    return row[\\\"quantity\\\"] if row else 0\"\n    }\n  ]\n}"
+        ]
+      ],
+      "dropped": [
+        {
+          "title": "TypeError when product stock row is missing",
+          "reason": "evidence not found in the file (unverifiable)"
+        },
+        {
+          "title": "Potential TypeError on missing database row",
+          "reason": "evidence not found in the file (unverifiable)"
+        }
+      ],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 681,
+          "output_tokens": 215,
+          "latency_ms": 15050,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 686,
+          "output_tokens": 213,
+          "latency_ms": 2271,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 17332.0,
+      "risk": "low"
+    },
+    {
+      "id": "h22",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\"findings\": []}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 657,
+          "output_tokens": 9,
+          "latency_ms": 1120,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 658,
+          "output_tokens": 9,
+          "latency_ms": 4959,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 662,
+          "output_tokens": 5,
+          "latency_ms": 5499,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 11591.4,
+      "risk": "low"
+    },
+    {
+      "id": "h23",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\"findings\": []}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 579,
+          "output_tokens": 9,
+          "latency_ms": 1827,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 584,
+          "output_tokens": 5,
+          "latency_ms": 1306,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 3144.7,
+      "risk": "low"
+    },
+    {
+      "id": "h24",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 758,
+          "output_tokens": 9,
+          "latency_ms": 5516,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 763,
+          "output_tokens": 9,
+          "latency_ms": 1257,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 6783.4,
+      "risk": "low"
+    },
+    {
+      "id": "h25",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 775,
+          "output_tokens": 9,
+          "latency_ms": 6085,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 780,
+          "output_tokens": 9,
+          "latency_ms": 5440,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 11534.9,
+      "risk": "low"
+    },
+    {
+      "id": "h26",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 705,
+          "output_tokens": 9,
+          "latency_ms": 9064,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 706,
+          "output_tokens": 9,
+          "latency_ms": 4641,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 710,
+          "output_tokens": 9,
+          "latency_ms": 5795,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 19512.5,
+      "risk": "low"
+    },
+    {
+      "id": "h27",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 571,
+          "output_tokens": 9,
+          "latency_ms": 1133,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 572,
+          "output_tokens": 9,
+          "latency_ms": 4965,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 576,
+          "output_tokens": 9,
+          "latency_ms": 1985,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 8094.0,
+      "risk": "low"
+    },
+    {
+      "id": "h28",
+      "split": "holdout",
+      "repeat": 0,
+      "expected": [],
+      "predicted": [],
+      "raw_model_findings": [],
+      "raw_model_output": [
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\n  \"findings\": []\n}"
+        ],
+        [
+          "{\"findings\": []}"
+        ]
+      ],
+      "dropped": [],
+      "errors": [
+        "Repository context unavailable: repository is not indexed."
+      ],
+      "llm_calls": [
+        {
+          "focus": "bug",
+          "ok": true,
+          "error": null,
+          "input_tokens": 716,
+          "output_tokens": 9,
+          "latency_ms": 5370,
+          "attempts": 1
+        },
+        {
+          "focus": "security",
+          "ok": true,
+          "error": null,
+          "input_tokens": 717,
+          "output_tokens": 9,
+          "latency_ms": 5658,
+          "attempts": 1
+        },
+        {
+          "focus": "quality",
+          "ok": true,
+          "error": null,
+          "input_tokens": 721,
+          "output_tokens": 5,
+          "latency_ms": 1008,
+          "attempts": 1
+        }
+      ],
+      "api_failures": 0,
+      "latency_ms": 12048.9,
+      "risk": "low"
+    }
+  ],
+  "confirmed_only": {
+    "expected": 21,
+    "predicted": 18,
+    "detected": 17,
+    "true_positives": 16,
+    "false_positives": 0,
+    "duplicates": 1,
+    "precision": 0.8889,
+    "recall": 0.7619,
+    "f1": 0.8205,
+    "lenient_precision": 0.9444,
+    "lenient_recall": 0.8095,
+    "lenient_f1": 0.8718,
+    "false_negative_rate": 0.2381,
+    "clean_cases": 7,
+    "clean_case_false_positive_rate": 0.0,
+    "category_accuracy": 0.9412,
+    "severity_exact": 0.3529,
+    "severity_within_one": 1.0,
+    "line_exact": 1.0,
+    "line_tolerance": 2,
+    "duplicate_rate": 0.0556,
+    "by_type": {
+      "authentication": {
+        "expected": 1,
+        "detected": 1,
+        "strict": 1,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "authorization": {
+        "expected": 2,
+        "detected": 1,
+        "strict": 1,
+        "recall": 0.5,
+        "detection_rate": 0.5
+      },
+      "command_injection": {
+        "expected": 2,
+        "detected": 2,
+        "strict": 1,
+        "recall": 0.5,
+        "detection_rate": 1.0
+      },
+      "deserialization": {
+        "expected": 1,
+        "detected": 1,
+        "strict": 1,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "error_handling": {
+        "expected": 2,
+        "detected": 1,
+        "strict": 1,
+        "recall": 0.5,
+        "detection_rate": 0.5
+      },
+      "hardcoded_secret": {
+        "expected": 2,
+        "detected": 2,
+        "strict": 2,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "idor": {
+        "expected": 2,
+        "detected": 2,
+        "strict": 2,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "logic": {
+        "expected": 3,
+        "detected": 1,
+        "strict": 1,
+        "recall": 0.3333,
+        "detection_rate": 0.3333
+      },
+      "path_traversal": {
+        "expected": 2,
+        "detected": 2,
+        "strict": 2,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "sql_injection": {
+        "expected": 2,
+        "detected": 2,
+        "strict": 2,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "ssrf": {
+        "expected": 1,
+        "detected": 1,
+        "strict": 1,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "weak_crypto": {
+        "expected": 1,
+        "detected": 1,
+        "strict": 1,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      }
+    },
+    "confusion_matrix": {
+      "rows": [
+        "security",
+        "bug",
+        "clean"
+      ],
+      "columns": [
+        "security",
+        "bug",
+        "quality",
+        "none"
+      ],
+      "counts": {
+        "security": {
+          "security": 14,
+          "bug": 1,
+          "quality": 0,
+          "none": 1
+        },
+        "bug": {
+          "security": 0,
+          "bug": 2,
+          "quality": 0,
+          "none": 3
+        },
+        "clean": {
+          "security": 0,
+          "bug": 0,
+          "quality": 0,
+          "none": 7
+        }
+      }
+    },
+    "per_case": [
+      {
+        "id": "h01",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h02",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h03",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h04",
+        "expected": 1,
+        "predicted": 2,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 1,
+        "false_positives": 0
+      },
+      {
+        "id": "h05",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h06",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h07",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h08",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h09",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h10",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h11",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h12",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h13",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h14",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h15",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h16",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h17",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h18",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h19",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h20",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h21",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h22",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h23",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h24",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h25",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h26",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h27",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h28",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      }
+    ]
+  },
+  "including_possible": {
+    "expected": 21,
+    "predicted": 20,
+    "detected": 19,
+    "true_positives": 18,
+    "false_positives": 0,
+    "duplicates": 1,
+    "precision": 0.9,
+    "recall": 0.8571,
+    "f1": 0.878,
+    "lenient_precision": 0.95,
+    "lenient_recall": 0.9048,
+    "lenient_f1": 0.9268,
+    "false_negative_rate": 0.1429,
+    "clean_cases": 7,
+    "clean_case_false_positive_rate": 0.0,
+    "category_accuracy": 0.9474,
+    "severity_exact": 0.3684,
+    "severity_within_one": 1.0,
+    "line_exact": 1.0,
+    "line_tolerance": 2,
+    "duplicate_rate": 0.05,
+    "by_type": {
+      "authentication": {
+        "expected": 1,
+        "detected": 1,
+        "strict": 1,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "authorization": {
+        "expected": 2,
+        "detected": 1,
+        "strict": 1,
+        "recall": 0.5,
+        "detection_rate": 0.5
+      },
+      "command_injection": {
+        "expected": 2,
+        "detected": 2,
+        "strict": 1,
+        "recall": 0.5,
+        "detection_rate": 1.0
+      },
+      "deserialization": {
+        "expected": 1,
+        "detected": 1,
+        "strict": 1,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "error_handling": {
+        "expected": 2,
+        "detected": 1,
+        "strict": 1,
+        "recall": 0.5,
+        "detection_rate": 0.5
+      },
+      "hardcoded_secret": {
+        "expected": 2,
+        "detected": 2,
+        "strict": 2,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "idor": {
+        "expected": 2,
+        "detected": 2,
+        "strict": 2,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "logic": {
+        "expected": 3,
+        "detected": 3,
+        "strict": 3,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "path_traversal": {
+        "expected": 2,
+        "detected": 2,
+        "strict": 2,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "sql_injection": {
+        "expected": 2,
+        "detected": 2,
+        "strict": 2,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "ssrf": {
+        "expected": 1,
+        "detected": 1,
+        "strict": 1,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      },
+      "weak_crypto": {
+        "expected": 1,
+        "detected": 1,
+        "strict": 1,
+        "recall": 1.0,
+        "detection_rate": 1.0
+      }
+    },
+    "confusion_matrix": {
+      "rows": [
+        "security",
+        "bug",
+        "clean"
+      ],
+      "columns": [
+        "security",
+        "bug",
+        "quality",
+        "none"
+      ],
+      "counts": {
+        "security": {
+          "security": 14,
+          "bug": 1,
+          "quality": 0,
+          "none": 1
+        },
+        "bug": {
+          "security": 0,
+          "bug": 4,
+          "quality": 0,
+          "none": 1
+        },
+        "clean": {
+          "security": 0,
+          "bug": 0,
+          "quality": 0,
+          "none": 7
+        }
+      }
+    },
+    "per_case": [
+      {
+        "id": "h01",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h02",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h03",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h04",
+        "expected": 1,
+        "predicted": 2,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 1,
+        "false_positives": 0
+      },
+      {
+        "id": "h05",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h06",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h07",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h08",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h09",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h10",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h11",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h12",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h13",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h14",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h15",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h16",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h17",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h18",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h19",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h20",
+        "expected": 1,
+        "predicted": 1,
+        "detected": 1,
+        "strict": 1,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h21",
+        "expected": 1,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h22",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h23",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h24",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h25",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h26",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h27",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      },
+      {
+        "id": "h28",
+        "expected": 0,
+        "predicted": 0,
+        "detected": 0,
+        "strict": 0,
+        "duplicates": 0,
+        "false_positives": 0
+      }
+    ]
+  },
+  "legacy_scores": {
+    "finding_precision": 0.8889,
+    "finding_recall": 0.7619,
+    "false_positive_findings": 2,
+    "clean_case_false_positive_rate": 0.0,
+    "predicted": 18,
+    "expected": 21,
+    "true_positives": 16
+  },
+  "latency": {
+    "n": 28,
+    "mean_ms": 15585.29,
+    "median_ms": 16222.15,
+    "p95_ms": 28555.0,
+    "max_ms": 31401.8
+  },
+  "tokens": {
+    "total": 63677,
+    "per_case_mean": 2274.2,
+    "reported_calls": 76
+  },
+  "api_failures": 0,
+  "cases_with_errors": 0
+}

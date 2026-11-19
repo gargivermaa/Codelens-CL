@@ -37,3 +37,17 @@ dist/
 # GitHub App private keys
 *.pem
 *.key
+# Frontend build output and dependencies (Docker builds the dashboard itself)
+frontend/node_modules/
+frontend/dist/
+
+# GitHub App private key and other local secrets
+secrets/*
+!secrets/.gitkeep
+
+# Benchmark embedding cache (local, regenerable)
+benchmarks/.cache/
+
+# Local database backups and recovery scripts
+backups/
+restore_idor.py
