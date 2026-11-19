@@ -47,3 +47,7 @@ secrets/*
 
 # Benchmark embedding cache (local, regenerable)
 benchmarks/.cache/
+
+# Local database backups and recovery scripts
+backups/
+restore_idor.py

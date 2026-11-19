@@ -76,36 +76,69 @@ def _unit_key(payload: dict) -> tuple:
 class HybridRetriever:
     """Retriever bound to one repository's collection."""
 
+    
+
     def __init__(self, repo_github_id: int, qdrant: QdrantClient | None = None, gemini_client=None,
-                 query_cache: dict | None = None):
+             query_cache: dict | None = None, corpus_payloads: list[dict] | None = None):
         self.repo_github_id = repo_github_id
         self.collection = collection_name(repo_github_id)
         self.qdrant = qdrant or get_qdrant_client()
         self.gemini_client = gemini_client
-        # Optional {query text: vector} cache (benchmarks reuse embeddings across runs).
         self.query_cache = query_cache
+        self.corpus_payloads = corpus_payloads
         self._ids: list[str] | None = None
         self._payloads: list[dict] = []
         self._bm25: BM25Index | None = None
 
     # ---- corpus -----------------------------------------------------------
+    
+
+    
     def _load_corpus(self) -> None:
         if self._bm25 is not None:
             return
+
+        # Prefer explicitly supplied repository chunks.
+        if self.corpus_payloads is not None:
+            payloads = self.corpus_payloads
+            ids = [f"local:{i}" for i in range(len(payloads))]
+            docs = [bm25_document(p) for p in payloads]
+
+            self._ids = ids
+            self._payloads = payloads
+            self._bm25 = BM25Index(docs)
+            return
+
+        # Existing Qdrant-backed corpus.
         if not self.qdrant.collection_exists(self.collection):
-            raise RepositoryNotIndexedError(f"Repository {self.repo_github_id} is not indexed "
-                                            f"(collection {self.collection} missing)")
+            raise RepositoryNotIndexedError(
+                f"Repository {self.repo_github_id} is not indexed "
+                f"(collection {self.collection} missing)"
+            )
+
         ids, payloads, offset = [], [], None
+
         while True:
-            points, offset = self.qdrant.scroll(self.collection, limit=1000, offset=offset,
-                                                with_payload=True, with_vectors=False)
+            points, offset = self.qdrant.scroll(
+                self.collection,
+                limit=1000,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+            )
+
             for point in points:
                 ids.append(str(point.id))
                 payloads.append(point.payload or {})
+
             if offset is None:
                 break
+
         docs = [bm25_document(p) for p in payloads]
-        self._ids, self._payloads, self._bm25 = ids, payloads, BM25Index(docs)
+        self._ids = ids
+        self._payloads = payloads
+        self._bm25 = BM25Index(docs)
+
 
     def corpus_size(self) -> int:
         self._load_corpus()
@@ -156,7 +189,18 @@ class HybridRetriever:
         degraded = None
         used_mode = mode
 
-        if mode in ("hybrid", "dense"):
+        
+        if self.corpus_payloads is not None and mode == "dense":
+            raise RepositoryNotIndexedError(
+                "Dense retrieval unavailable: using an in-memory BM25 corpus."
+            )
+
+        if self.corpus_payloads is not None and mode == "hybrid":
+            degraded = "Qdrant repository index unavailable; using in-memory BM25 only."
+            used_mode = "bm25"
+            logger.warning(degraded)
+
+        elif mode in ("hybrid", "dense"):
             t0 = time.perf_counter()
             try:
                 dense_hits = self._dense(query, candidate_k, query_vector)
@@ -167,10 +211,14 @@ class HybridRetriever:
                 used_mode = "bm25"
                 logger.warning("Hybrid retrieval degraded to BM25: %s", exc)
             dense_ms = int((time.perf_counter() - t0) * 1000)
+
+        
         if mode in ("hybrid", "bm25"):
             t0 = time.perf_counter()
             bm25_hits = self._bm25_search(query, candidate_k)
             bm25_ms = int((time.perf_counter() - t0) * 1000)
+
+
 
         if exclude:
             dense_hits = [h for h in dense_hits if not exclude(h[2])]

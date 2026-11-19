@@ -10,7 +10,7 @@ from qdrant_client import QdrantClient
 
 from app.core.chunker import chunk_source
 from app.core.diff_parser import parse_pull_request_files
-from app.core.embedder import index_repository
+from app.core.embedder import EmbeddingQuotaError, index_repository
 from app.core.retriever import HybridRetriever
 from app.review import risk
 from app.review.graph import ReviewPipeline, render_inline_body
@@ -331,3 +331,77 @@ def test_removing_an_authorization_check_routes_to_the_security_pass():
         "file_contents": {"shop/orders.py": content}})
     assert state["sensitive_files"] == ["shop/orders.py"]
     assert state["security_llm_used"] is True and "security" in llm.prompts
+
+
+def test_in_memory_bm25_works_without_qdrant_or_gemini():
+    qdrant = QdrantClient(":memory:")
+    failing = HashingGemini(
+        fail_with=EmbeddingQuotaError("quota exhausted")
+    )
+
+    payloads = [{
+        "file": "app/billing.py",
+        "qualified_name": "calculate_discount",
+        "type": "function",
+        "text": "def calculate_discount(total, code): return total * 0.10",
+        "start_line": 1,
+        "end_line": 1,
+    }]
+
+    retriever = HybridRetriever(
+        999,
+        qdrant,
+        failing,
+        corpus_payloads=payloads,
+    )
+
+    result = retriever.search(
+        "calculate_discount",
+        top_k=3,
+        mode="hybrid",
+    )
+
+    assert result.mode == "bm25"
+    assert result.degraded_reason is not None
+    assert len(result.chunks) == 1
+    assert result.chunks[0].payload["qualified_name"] == "calculate_discount"
+    assert result.chunks[0].bm25_rank == 1
+    assert result.chunks[0].dense_rank is None
+
+
+def test_in_memory_bm25_works_without_qdrant_or_gemini():
+    qdrant = QdrantClient(":memory:")
+    failing = HashingGemini(
+        fail_with=EmbeddingQuotaError("quota exhausted")
+    )
+
+    payloads = [{
+        "file": "app/billing.py",
+        "qualified_name": "calculate_discount",
+        "type": "function",
+        "text": "def calculate_discount(total, code): return total * 0.10",
+        "start_line": 1,
+        "end_line": 1,
+    }]
+
+    retriever = HybridRetriever(
+        999,
+        qdrant,
+        failing,
+        corpus_payloads=payloads,
+    )
+
+    result = retriever.search(
+        "calculate_discount",
+        top_k=3,
+        mode="hybrid",
+    )
+
+    assert result.mode == "bm25"
+    assert "in-memory BM25" in result.degraded_reason
+    assert len(result.chunks) == 1
+    assert result.chunks[0].payload["qualified_name"] == "calculate_discount"
+    assert result.chunks[0].bm25_rank == 1
+    assert result.chunks[0].dense_rank is None
+
+

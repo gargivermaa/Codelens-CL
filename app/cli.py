@@ -67,6 +67,52 @@ def _cmd_review(args):
     print(json.dumps(result, indent=2, default=str))
 
 
+def _cmd_publish(args):
+    from app.models.database import SessionLocal
+    from app.models.review import Review
+    from app.models.pull_request import PullRequest
+    from app.models.repository import Repository
+    from app.services.deps import build_deps
+    from app.services.review_service import post_review
+
+    db = SessionLocal()
+    try:
+        review = db.get(Review, args.review_id)
+        if review is None:
+            raise SystemExit(f"Review {args.review_id} not found")
+
+        if review.status not in ("analyzed", "completed"):
+            raise SystemExit(f"Review is not ready: {review.status}")
+
+        if review.github_review_id:
+            raise SystemExit(
+                f"Already posted: GitHub review {review.github_review_id}"
+            )
+
+        pr = db.get(PullRequest, review.pr_id)
+        if pr is None:
+            raise SystemExit("Pull request not found")
+
+        repo = db.get(Repository, pr.repo_id)
+        if repo is None:
+            raise SystemExit("Repository not found")
+
+        deps = build_deps(args.installation_id or repo.installation_id)
+
+        result = post_review(
+            db, review, repo.full_name, pr.pr_number, deps.github
+        )
+        print(json.dumps({
+            "status": "posted",
+            "review_id": review.id,
+            "github_review_id": result,
+            "repo": repo.full_name,
+            "pr": pr.pr_number,
+        }, indent=2))
+    finally:
+        db.close()
+
+
 def _cmd_models(args):
     """List models this API key can use for text generation and embeddings."""
     from app.core.embedder import get_gemini_client
@@ -109,6 +155,10 @@ def main() -> None:
                    help="also review closed/merged PRs (real-world evaluation; use with --no-post)")
     p.add_argument("--force", action="store_true", help="re-review a commit that was already reviewed")
     p.set_defaults(func=_cmd_review)
+    p = sub.add_parser("publish", help="publish an existing review without rerunning LLMs")
+    p.add_argument("review_id", type=int)
+    p.add_argument("--installation-id", type=int)
+    p.set_defaults(func=_cmd_publish)
 
     p = sub.add_parser("models", help="list Gemini models available to your API key")
     p.add_argument("--all", action="store_true")

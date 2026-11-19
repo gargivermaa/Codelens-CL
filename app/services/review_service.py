@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.chunker import chunk_repository
 from app.core.diff_parser import parse_pull_request_files
-from app.core.embedder import EmbeddingError, collection_name, index_repository
+from app.core.embedder import (EmbeddingError, collection_name, index_repository,  reuse_vectors_from_other_collections)
 from app.core.retriever import HybridRetriever
 from app.github.client import GitHubClient, InlineComment
 from app.models.finding import Finding
@@ -116,7 +116,7 @@ def claim_review(db: Session, pr_id: int, head_sha: str, base_sha: str,
     if force and review.status in ("completed", "analyzed", "failed"):
         # Explicit re-review (CLI --force): analyze this commit again from scratch.
         review.status = "pending"
-        review.github_review_id = None
+        
     if review.status == "completed":
         db.commit()
         return None, "already reviewed"
@@ -149,7 +149,29 @@ def ensure_indexed(db: Session, repo: Repository, ref: str, deps: ReviewDeps) ->
         with tempfile.TemporaryDirectory(prefix="codelens-") as tmp:
             files = deps.github.download_python_sources(repo.full_name, ref, Path(tmp))
             chunks = chunk_repository(tmp)
-            result = index_repository(repo.github_id, chunks, deps.gemini_client, deps.qdrant)
+            # Identical chunks already embedded in another local collection cost no quota.
+            
+            reuse_vectors_from_other_collections(deps.qdrant, repo.github_id, chunks)
+
+            # Keep repository chunks available for BM25 if Gemini embedding fails.
+            corpus_payloads = [chunk.to_dict() for chunk in chunks]
+
+            try:
+                result = index_repository(
+                    repo.github_id, chunks, deps.gemini_client, deps.qdrant
+                )
+            except EmbeddingError as exc:
+                logger.warning(
+                    "Dense indexing unavailable for %s; using in-memory BM25: %s",
+                    repo.full_name, exc
+                )
+                return {
+                    "indexed": False,
+                    "reason": f"Dense indexing unavailable: {exc}",
+                    "corpus_payloads": corpus_payloads,
+                }
+
+            
         repo.indexed_sha = ref
         repo.indexed_at = _utcnow()
         repo.indexed_chunks = result.chunks_indexed
@@ -168,6 +190,12 @@ def persist_analysis(db: Session, review: Review, pr_id: int, repo_github_id: in
     findings: list[ReviewFinding] = state.get("findings", [])
     risk = state["risk"]
     llm_calls = state.get("llm_calls", [])
+    failed_calls = [c for c in llm_calls if c.get("ok") is False]
+    if failed_calls:
+        raise RuntimeError(
+        f"Incomplete analysis: {len(failed_calls)} LLM pass(es) failed. "
+        "Previous review results preserved."
+    )
     token_values = [c.get(k) for c in llm_calls if c.get("ok") for k in ("input_tokens", "output_tokens")]
     known = [t for t in token_values if t is not None]
 
@@ -233,9 +261,10 @@ def post_review(db: Session, review: Review, repo_full_name: str, pr_number: int
                                 end_line=row.end_line, explanation=row.explanation or "",
                                 suggested_fix=row.suggested_fix or "",
                                 context_refs=json.loads(row.context_refs or "[]"))
-        start = row.start_line if row.start_line < row.comment_line else None
-        comments.append(InlineComment(row.file_path, row.comment_line, render_inline_body(finding, locations),
-                                      start_line=start))
+        
+                # Single-line comments only: a multi-line start_line outside the diff makes
+        # GitHub reject every inline comment of the review (422).
+        comments.append(InlineComment(row.file_path, row.comment_line, render_inline_body(finding, locations)))
     posted = github.create_review(repo_full_name, pr_number, review.head_sha, review.summary or "", comments)
     if posted.inline_posted:
         for row in rows:
@@ -285,9 +314,25 @@ def run_review(db: Session, deps: ReviewDeps, repo_github_id: int, repo_full_nam
                 db.rollback()
                 notes.append(f"Repository indexing failed ({exc}); "
                              + ("using the previous index." if repo.indexed_sha else "no repository context."))
+            
+            corpus_payloads = index_info.pop("corpus_payloads", None)
+
             retriever = None
-            if deps.qdrant.collection_exists(collection_name(repo_github_id)):
-                retriever = HybridRetriever(repo_github_id, deps.qdrant, deps.gemini_client)
+
+            if corpus_payloads is not None:
+                retriever = HybridRetriever(
+                    repo_github_id,
+                    deps.qdrant,
+                    deps.gemini_client,
+                    corpus_payloads=corpus_payloads,
+                )
+            elif deps.qdrant.collection_exists(collection_name(repo_github_id)):
+                retriever = HybridRetriever(
+                    repo_github_id,
+                    deps.qdrant,
+                    deps.gemini_client,
+                )
+
 
             files = parse_pull_request_files(deps.github.list_pull_files(repo_full_name, pr_number),
                                              settings.REVIEW_MAX_PATCH_LINES, settings.REVIEW_MAX_FILES)
